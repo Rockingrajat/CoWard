@@ -17,12 +17,18 @@ public class MainScript : MonoBehaviour
     [SerializeField] GameObject Carrier;
     [SerializeField] GameObject ExitScreenScore, ExitScreenRating;
 
+    [SerializeField] GameObject rightArrow;
+    [SerializeField] GameObject leftArrow;
+    [SerializeField] GameObject upArrow;
+    [SerializeField] GameObject downArrow;
+
     Text timer_obj, notification, exit_score, exit_rating;
     public int total_time = 180;
     public int level;
     public float startTime, lastUpdate, alpha = 1; public int lastRoom;
     bool spawned = false;
     public bool movingPatient = false;
+    public int exitScreen = 0;
     [HideInInspector] public GameObject movingPatientObject;
     Vector2 initialPatientPosition;
     GameObject originalSlotObject;
@@ -43,7 +49,9 @@ public class MainScript : MonoBehaviour
     int roomsPerFloor = 4;
     float minZoom;
     float maxZoom = 1;
-    float spawnInterval = 5;
+    //OPTIMIZE 
+    float spawnInterval;
+    //
     bool zooming = false;
     bool scrolling = false;
     bool badTouch = false;
@@ -64,7 +72,7 @@ public class MainScript : MonoBehaviour
     GameObject itemObj;
     GameObject fullItemObj;
     bool applying;
-    int patientProperties = 21;
+    int patientProperties = 23;
     GameObject activeCard = null;
     public  int[] failure_ins;
     [SerializeField]
@@ -72,102 +80,12 @@ public class MainScript : MonoBehaviour
     [SerializeField]
     GameObject HelpButton;
 
-    public int[] SetFailure(int num_failures){
-        failure_ins = new int[num_failures];
-        int offset = 15;
-        for(int i=0;i<num_failures;i++){
-            failure_ins[i] = Random.Range(offset,total_time-offset);
-        }
-        System.Array.Sort<int>(failure_ins, new System.Comparison<int>( 
-                  (i1, i2) => i2.CompareTo(i1)));
-        return failure_ins;
-    }
-    public float[] CreatePatients(int num_patients, int level){
-        int[] roomdetail = new int[(lastRoom/100)*roomsPerFloor*4];
-        float[] patientArray = new float[num_patients * patientProperties]; //age, gender, 5 symptoms, severity, prob_sev_inc, prob_sev_dec_base, room_multiplier, position, infected
-        // Debug.Log("patients.leng" + patients.Length);
-        for(int k = 0; k< num_patients; k++)
-        {
-            int i = patientProperties * k;
-            GameObject obj = Instantiate(prefabPatient, waitingRoom.transform);
-            obj.GetComponent<Patient>().Initialize(level);
-            Patient curPatient = obj.GetComponent<Patient>();
-            patientArray[i] = curPatient.age;
-            patientArray[i + 1] = curPatient.gender;
-            patientArray[i + 2] = curPatient.fever;
-            patientArray[i + 3] = curPatient.cough;
-            patientArray[i + 4] = curPatient.tiredness;
-            patientArray[i + 5] = curPatient.chest_pain;
-            patientArray[i + 6] = curPatient.breathing_difficulty;
-            patientArray[i + 7] = curPatient.severity;
-            patientArray[i + 8] = curPatient.prob_sev_inc;
-            patientArray[i + 9] = curPatient.prob_sev_dec_base;
-            patientArray[i + 10] = curPatient.room_multiplier;
-            Debug.Log("curPatient.room_multiplier " + patientArray[i + 10]);
-            int rv = Random.Range(0,10);
-            if(rv<4){
-                patientArray[i + 11] = 2; //lobby
-            }
-            else if(rv<5){
-                patientArray[i + 11] = 3; //carrier
-            }
-            else 
-            {
-                int floor = Random.Range(1,lastRoom/100); //ward
-                int room = Random.Range(1,roomsPerFloor);
-                int bed = Random.Range(1,4);
-                int ward_bed = 1000*floor+10*room+bed;
-                while(roomdetail[ward_bed]==1 || 100*floor+room>lastRoom){
-                    floor = Random.Range(1,lastRoom/100);
-                    room = Random.Range(1,roomsPerFloor);
-                    bed = Random.Range(1,4);
-                    ward_bed = 1000*floor+10*room+bed;
-                }
-                patientArray[i + 11] = ward_bed;
-                
-                int prob = Random.Range(1,10);
-                if(prob>=7){
-                    patientArray[i + 15] = Time.time;
-                    prob = Random.Range(1,10);
-                    if(prob<=7){
-                        patientArray[i + 16] = 1;
-                        patientArray[i + 17] = obj.GetComponent<Patient>().test_time[0];
-                    }
-                    else if(prob<=9){
-                        patientArray[i + 16] = 2;
-                        patientArray[i + 17] = obj.GetComponent<Patient>().test_time[1];
-                    }
-                    else{
-                        patientArray[i + 16] = 3;
-                        patientArray[i + 17] = obj.GetComponent<Patient>().test_time[2];
-                    }
-                    
-                    
-                }
-            }
-            
-            patientArray[i + 12] = curPatient.infected;
-            patientArray[i + 13] = curPatient.mythreshold;
-            patientArray[i + 14] = curPatient.max_coins; //change with level
-            
-            
-            patientArray[i + 18] = curPatient.accuracy; 
-            patientArray[i + 19] = curPatient.priorPositive;
-            patientArray[i + 20] = curPatient.initTime;
-            for (int j = 0; j < patientProperties; j++)
-            {
-                Debug.Log((i + j).ToString() + " " + patientArray[i + j].ToString());
-            }
-            Debug.Log("end loop 1");
-        }
-
-       return patientArray;
-    }
+    
     public void SaveGame(string saveName)
     {
         GameObject[]patients = GameObject.FindGameObjectsWithTag("patient");
         float[] patientArray = new float[patients.Length * patientProperties]; //age, gender, 5 symptoms, severity, prob_sev_inc, prob_sev_dec_base, room_multiplier, position, infected
-        Debug.Log("patients.leng" + patients.Length);
+        //Debug.Log("patients.leng" + patients.Length);
         for(int k = 0; k< patients.Length; k++)
         {
             int i = patientProperties * k;
@@ -183,7 +101,7 @@ public class MainScript : MonoBehaviour
             patientArray[i + 8] = curPatient.prob_sev_inc;
             patientArray[i + 9] = curPatient.prob_sev_dec_base;
             patientArray[i + 10] = curPatient.room_multiplier;
-            Debug.Log("curPatient.room_multiplier " + patientArray[i + 10]);
+            //Debug.Log("curPatient.room_multiplier " + patientArray[i + 10]);
             if (curPatient.transform.parent.gameObject.name == "WaitingRoom")
             {
                 patientArray[i + 11] = 1;
@@ -198,11 +116,11 @@ public class MainScript : MonoBehaviour
             }else if (curPatient.transform.parent.gameObject.name.Substring(0, 4) == "Beds")
             {
                 patientArray[i + 11] = int.Parse(curPatient.transform.parent.parent.gameObject.name) * 10 + curPatient.transform.parent.gameObject.name[5] - '0';
-                Debug.Log("Save patientArray[i + 11] " + patientArray[i + 11]);
+                //Debug.Log("Save patientArray[i + 11] " + patientArray[i + 11]);
             }
             else
             {
-                Debug.Log("Slot of buggy patient " + curPatient.transform.parent.gameObject.name);
+                //Debug.Log("Slot of buggy patient " + curPatient.transform.parent.gameObject.name);
             }
             patientArray[i + 12] = curPatient.infected;
             patientArray[i + 13] = curPatient.mythreshold;
@@ -224,11 +142,13 @@ public class MainScript : MonoBehaviour
             patientArray[i + 18] = curPatient.accuracy;
             patientArray[i + 19] = curPatient.priorPositive;
             patientArray[i + 20] = curPatient.initTime;
+            patientArray[i + 21] = curPatient.Initseverity;
+            patientArray[i + 22] = curPatient.infected_init;
             for (int j = 0; j < patientProperties; j++)
             {
-                Debug.Log((i + j).ToString() + " " + patientArray[i + j].ToString());
+                //Debug.Log((i + j).ToString() + " " + patientArray[i + j].ToString());
             }
-            Debug.Log("end loop 1");
+            //Debug.Log("end loop 1");
         }
 
         int[] inventory = new int[Item.num_items];
@@ -236,7 +156,7 @@ public class MainScript : MonoBehaviour
         {
             inventory[i] = Store.inventory[Store.stringFromItem((Item.ItemType)i)];
         }
-        SaveData data = new SaveData(patientArray, inventory, failure_ins, lastRoom, startTime, lastUpdate, alpha, Time.time, Attributes.score, Attributes.rating, total_time, level);
+        SaveData data = new SaveData(patientArray, inventory, failure_ins, lastRoom, startTime, lastUpdate, alpha, Time.time, Attributes.score, Attributes.rating, total_time, level, spawnInterval, waitingRoom_penalty);
         SaveSystem<SaveData>.SavePlayer(data, saveName);
     }
 
@@ -246,9 +166,12 @@ public class MainScript : MonoBehaviour
         lastRoom = data.lastRoom;
         alpha = data.alpha;
         lastUpdate = data.lastUpdate;
+        spawnInterval = data.spawnInterval;
         startTime = Time.time - data.currentTime + data.startTime;
         total_time = data.totalTime;
         level = data.level;
+        waitingRoom_penalty = data.waitingRoom_penalty;
+        exitScreen = 0;
         timer_obj = timer.GetComponent<Text>();
         timer_obj.text = (total_time - lastUpdate).ToString();
         initializeWard();
@@ -256,7 +179,7 @@ public class MainScript : MonoBehaviour
         {
             Store.inventory[Store.stringFromItem((Item.ItemType)i)] = data.inventory[i];
         }
-
+        Time.timeScale = 1;
         ShopUI.GetComponent<Store>().initializeStore(level);
         
         notification = NotificationBar.GetComponent<Text>();
@@ -264,20 +187,22 @@ public class MainScript : MonoBehaviour
         Lobby.GetComponent<Slot>().ForceStart();
         Carrier.GetComponent<Slot>().ForceStart();
         exit_screen.SetActive(false);
+        exit_score = ExitScreenScore.GetComponent<Text>();
+        exit_rating = ExitScreenRating.GetComponent<Text>();
         help_screen.SetActive(false);
         Attributes.score = data.score;
         Attributes.rating = data.rating;
 
-         HelpButton.GetComponent<Button>().onClick.AddListener(()=>ShowHelp(help_screen));
+        HelpButton.GetComponent<Button>().onClick.AddListener(()=>ShowHelp(help_screen));
         // GameObject HelpPanel = mainCamera.transform.Find("Help").gameObject;
         // mainCamera.transform.Find("HelpButton").gameObject.GetComponent<Button>().onClick.AddListener(()=>ShowHelp(HelpPanel));
-        Debug.Log(" patientArray.Length " + data.patientArray.Length);
+        //Debug.Log(" patientArray.Length " + data.patientArray.Length);
         for (int k = 0; k< data.patientArray.Length / patientProperties; k++)
         {
             int i = patientProperties * k;
             for(int j = 0; j < patientProperties; j++)
             {
-                Debug.Log((i + j).ToString() + " " + data.patientArray[i + j].ToString());
+                //Debug.Log((i + j).ToString() + " " + data.patientArray[i + j].ToString());
             }
             GameObject parentObj;
             if(data.patientArray[i + 11] == 1)
@@ -292,7 +217,7 @@ public class MainScript : MonoBehaviour
             }
             else
             {
-                Debug.Log("Load patientArray[i + 11] " + data.patientArray[i + 11]);
+                //Debug.Log("Load patientArray[i + 11] " + data.patientArray[i + 11]);
                 //Debug.Log(wardContent.transform.GetChild(0).gameObject.name);
                 //Debug.Log(wardContent.transform.childCount);
                 parentObj = wardContent.transform.Find(((int)data.patientArray[i + 11] / 10).ToString()).Find("Beds_" + ((int)data.patientArray[i + 11] % 10).ToString()).gameObject;
@@ -300,6 +225,8 @@ public class MainScript : MonoBehaviour
             GameObject fullPatientCurr = Instantiate(prefabPatient, parentObj.transform);
             Patient currPatientComponent = fullPatientCurr.GetComponent<Patient>();
             parentObj.GetComponent<Slot>().addPatient(fullPatientCurr);
+
+
             currPatientComponent.age = (int)data.patientArray[i];
             currPatientComponent.gender = (int)data.patientArray[i + 1];
             currPatientComponent.fever = (int)data.patientArray[i + 2];
@@ -308,31 +235,67 @@ public class MainScript : MonoBehaviour
             currPatientComponent.chest_pain = (int)data.patientArray[i+ 5];
             currPatientComponent.breathing_difficulty = (int)data.patientArray[i +6];
             currPatientComponent.severity = data.patientArray[i + 7];
+            currPatientComponent.Initseverity = (int)data.patientArray[i + 21];
+            currPatientComponent.infected_init = (int)data.patientArray[i + 22];
             currPatientComponent.prob_sev_inc = data.patientArray[i + 8];
             currPatientComponent.prob_sev_dec_base = data.patientArray[i + 9];
             currPatientComponent.room_multiplier = data.patientArray[i + 10];
-            Debug.Log("curPatient.room_multiplier " + data.patientArray[i + 10]);
+            //Debug.Log("curPatient.room_multiplier " + data.patientArray[i + 10]);
             currPatientComponent.infected = (int)data.patientArray[i + 12];
             currPatientComponent.mythreshold = (int)data.patientArray[i + 13];
             currPatientComponent.max_coins = (int)data.patientArray[i + 14];
-            currPatientComponent.startTestTime = Time.time - (data.currentTime - (int)data.patientArray[i + 15]);
+            if((int)data.patientArray[i + 15] != 0)
+            {
+                currPatientComponent.startTestTime = Time.time - (data.currentTime - (int)data.patientArray[i + 15]);
+            }
+            else
+            {
+                currPatientComponent.startTestTime = 0;
+            }
+            currPatientComponent.InitializeLate();
             switch ((int)data.patientArray[i + 16])
             {
                 case 1:
                     currPatientComponent.kitName = "CommonKit";
+                    fullPatientCurr.transform.Find("PatientCard(Clone)").Find("kitName").GetComponent<Text>().text = "Common Kit";
                     break;
                 case 2:
                     currPatientComponent.kitName = "ExpensiveKit";
+                    fullPatientCurr.transform.Find("PatientCard(Clone)").Find("kitName").GetComponent<Text>().text = "Common Kit";
                     break;
                 case 3:
                     currPatientComponent.kitName = "DeluxeKit";
+                    fullPatientCurr.transform.Find("PatientCard(Clone)").Find("kitName").GetComponent<Text>().text = "Common Kit";
                     break;
             }
             currPatientComponent.totalTestTime = data.patientArray[i + 17];
             currPatientComponent.accuracy = data.patientArray[i + 18];
             currPatientComponent.priorPositive = (int)data.patientArray[i + 19];
             currPatientComponent.initTime = Time.time - (data.currentTime - (int)data.patientArray[i + 20]);
-            currPatientComponent.InitializeLate();
+            if (parentObj.name == "Lobby")
+            {
+                fullPatientCurr.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().sprite = Resources.Load<Sprite>("characterSitting/" + currPatientComponent.age.ToString() + "/" + currPatientComponent.gender.ToString() + "/1");
+                Vector2 vec = new Vector2(100, 265);
+                fullPatientCurr.GetComponent<RectTransform>().sizeDelta = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().size = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().offset = vec / 2;
+            }
+            else if (parentObj.name.Substring(0, 4) == "Beds")
+            {
+                fullPatientCurr.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().sprite = Resources.Load<Sprite>("characterInBed/" + currPatientComponent.age.ToString() + "/" + currPatientComponent.gender.ToString() + "/1");
+                Vector2 vec = new Vector2(175, 200);
+                fullPatientCurr.GetComponent<RectTransform>().sizeDelta = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().size = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().offset = vec / 2;
+            }
+            else
+            {
+                fullPatientCurr.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().sprite = Resources.Load<Sprite>("character/" + currPatientComponent.age.ToString() + "/" + currPatientComponent.gender.ToString() + "/1");
+                Vector2 vec = new Vector2(100, 100);
+                fullPatientCurr.GetComponent<RectTransform>().sizeDelta = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().size = vec;
+                fullPatientCurr.GetComponent<BoxCollider2D>().offset = vec / 2;
+            }
         }
     }
 
@@ -374,7 +337,15 @@ public class MainScript : MonoBehaviour
     {
         roomGap = (reservedRoomSize - roomSize) / 2;
         hospitalHeight = lastRoom/100 * reservedRoomSize;
-        hospitalWidth =  roomsPerFloor* reservedRoomSize;
+        //hospitalWidth =  roomsPerFloor* reservedRoomSize;
+        if (lastRoom / 100 == 1)
+        {
+            hospitalWidth = lastRoom % 10 * reservedRoomSize;
+        }
+        else
+        {
+            hospitalWidth = roomsPerFloor * reservedRoomSize;
+        }
         wardContent.GetComponent<RectTransform>().sizeDelta = new Vector2(hospitalWidth, hospitalHeight);
         for (int i = 0; i < lastRoom/100; i++)
         {
@@ -445,8 +416,8 @@ public class MainScript : MonoBehaviour
     {
         mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
         timer_obj = timer.GetComponent<Text>();
-     
-        Debug.Log(resumeFile);
+        Store.shopOn = false;
+        //Debug.Log(resumeFile);
         LoadGame(resumeFile);
             
        
@@ -470,11 +441,11 @@ public class MainScript : MonoBehaviour
         timer_obj.text = (total_time).ToString();*/
     }
 
-    public void save()
+/*    public void save()
     {
         SaveGame("save1");
         Application.Quit();
-    }
+    }*/
     public IEnumerator notif(string message){
         yield return new WaitForSeconds(1f);
 
@@ -488,6 +459,11 @@ public class MainScript : MonoBehaviour
         notification.text = " ";
     }
 
+    public void Resume(){
+        int le = level;
+        SceneManager.LoadScene("GameScene");
+        resumeFile = "level"+le.ToString();
+    }
     private void FixedUpdate()
     {
         if ((int)(Time.time - startTime) % spawnInterval == 0 && !spawned)
@@ -498,9 +474,14 @@ public class MainScript : MonoBehaviour
             {
                 GameObject obj = Instantiate(prefabPatient, waitingRoom.transform);
                 obj.GetComponent<Patient>().Initialize(level);
+                obj.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().sprite = Resources.Load<Sprite>("character/" + obj.GetComponent<Patient>().age.ToString() + "/" + obj.GetComponent<Patient>().gender.ToString() + "/1");
+                Vector2 vec = new Vector2(100, 100);
+                obj.GetComponent<RectTransform>().sizeDelta = vec;
+                obj.GetComponent<BoxCollider2D>().size = vec;
+                obj.GetComponent<BoxCollider2D>().offset = vec / 2;
                 if (!waitingRoomSlot.addPatient(obj))
                 {
-                    Debug.Log("HI");
+                    // Debug.Log("HI");
                 }
             }
             else
@@ -527,11 +508,20 @@ public class MainScript : MonoBehaviour
 
         if (time_elapsed >= total_time)
         {
-            exit_rating.text = "Rating:  " + ((float)GetComponent<Attributes>().GetRating()).ToString();
+            float rating = GetComponent<Attributes>().GetRating();
+            exit_rating.text = "Rating:  " + (rating).ToString("0.00");
+            Debug.Log(rating);
             exit_score.text = "Score:  " + GetComponent<Attributes>().GetScore().ToString();
-            exit_screen.transform.Find("Replay").GetComponent<Button>().onClick.AddListener(() => LoadGame("level"+level.ToString()));
-            exit_screen.transform.Find("Levels").GetComponent<Button>().onClick.AddListener(() => SceneManager.LoadScene("Level"));
-            
+            exit_screen.transform.GetChild(0).Find("Replay").GetComponent<Button>().onClick.AddListener(() => Resume());
+            exit_screen.transform.GetChild(0).Find("Levels").GetComponent<Button>().onClick.AddListener(() => SceneManager.LoadScene("Level"));
+            SaveGlobal prev_data = SaveSystem<SaveGlobal>.LoadPlayer("global1");
+            if(prev_data==null){
+                Debug.Log("something wrong");
+            }
+            SaveGlobal data = new SaveGlobal(level,rating, prev_data.farthest_level,prev_data.rating[level-1]);
+            SaveSystem<SaveGlobal>.SavePlayer(data, "global1");
+            Time.timeScale = 0;
+            exitScreen = 1;
             //GameObject exit_screen  = GameObject.Find("ExitScreen");
             exit_screen.SetActive(true);
             exit_screen.transform.SetAsLastSibling();
@@ -553,7 +543,7 @@ public class MainScript : MonoBehaviour
                     req.Find("Text").GetComponent<Text>().text = "Room Failure";
 
                     string message = "Room Failure in " + ward_num.ToString();
-                    Debug.Log(message);
+                    //Debug.Log(message);
                     StartCoroutine(notif(message));
                     for (int i = 0; i < req.childCount; i++)
                     {
@@ -564,7 +554,7 @@ public class MainScript : MonoBehaviour
                             pat.GetComponent<Patient>().prob_sev_dec_base = 0f;
                             pat.GetComponent<Patient>().prob_sev_inc = 0.2f;
                             //TO ADD
-                            Debug.Log("done right!");
+                            //Debug.Log("done right!");
                         }
                     }
                 }
@@ -574,7 +564,7 @@ public class MainScript : MonoBehaviour
                     Transform req = wardContent.transform.Find(ward_num.ToString());
                     req.Find("Text").GetComponent<Text>().text = "Equipment Failure";
                     string message = "Equipment Failure in " + ward_num.ToString();
-                    Debug.Log(message);
+                    //Debug.Log(message);
                     StartCoroutine(notif(message));
                     for (int i = 0; i < req.childCount; i++)
                     {
@@ -585,7 +575,7 @@ public class MainScript : MonoBehaviour
                             pat.GetComponent<Patient>().prob_sev_dec_base = 0.05f;
                             pat.GetComponent<Patient>().prob_sev_inc = 0.15f;
                             //TO ADD
-                            Debug.Log("done right!");
+                            //Debug.Log("done right!");
                         }
                     }
                 }
@@ -599,6 +589,8 @@ public class MainScript : MonoBehaviour
     {
         panel.transform.SetAsLastSibling();
 		panel.SetActive(!panel.activeSelf);
+        HelpButton.transform.SetAsLastSibling();
+        
     }
 
     void Update()
@@ -606,295 +598,392 @@ public class MainScript : MonoBehaviour
         //Debug.Log(waitingRoom.GetComponent<Slot>().numPatients);
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            //SaveGame("save1");
-            Application.Quit();
+            SaveGame("save1");
+            SceneManager.LoadScene("MainMenu");
         }
 
         //change the spawner to spawn at randomized intervals
-        
 
-        if (!Store.shopOn)
+        if (!exit_screen.activeInHierarchy)
         {
-            if (Input.touchCount == 1)
+            if (!Store.shopOn)
             {
-                Touch touch = Input.GetTouch(0);
-                Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
-                Vector2 rectTouchPosition = ScreenToRectPoint(touch.position);
-                if (!movingPatient && !scrolling && !badTouch && !zooming)
+                if (Input.touchCount == 1)
                 {
-
-                    Collider2D[] touchedColliders = Physics2D.OverlapPointAll(touchPosition);
-                    for (int i = 0; i < touchedColliders.Length; i++)
+                    Touch touch = Input.GetTouch(0);
+                    Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
+                    Vector2 rectTouchPosition = ScreenToRectPoint(touch.position);
+                    if (!movingPatient && !scrolling && !badTouch && !zooming)
                     {
-                        if (touchedColliders[i].gameObject.CompareTag("patient"))
+
+                        Collider2D[] touchedColliders = Physics2D.OverlapPointAll(touchPosition);
+                        for (int i = 0; i < touchedColliders.Length; i++)
                         {
-                            movingPatient = true;
-                            Testing.SetActive(true);
-                            Testing.transform.SetAsLastSibling();
-
-                            movingPatientObject = touchedColliders[i].gameObject;
-                            //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = false;
-                            movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = false;
-                            movingPatientObject.transform.SetAsLastSibling();
-                            initialPatientPosition = movingPatientObject.transform.position;
-
-                            originalSlotObject = movingPatientObject.transform.parent.gameObject;
-                            originalSlotObject.transform.SetAsLastSibling();
-                            Transform parent1 = originalSlotObject.transform.parent;
-                            if (parent1 != null)
+                            if (touchedColliders[i].gameObject.CompareTag("patient"))
                             {
-                                parent1.SetAsLastSibling();
-                                if (parent1.parent != null)
+                                movingPatient = true;
+                                Testing.SetActive(true);
+                                Testing.transform.SetAsLastSibling();
+
+                                movingPatientObject = touchedColliders[i].gameObject;
+                                Debug.Log("sev" + movingPatientObject.GetComponent<Patient>().severity);
+                                Debug.Log("initsev" + movingPatientObject.GetComponent<Patient>().Initseverity);
+                                //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = false;
+                                movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = false;
+                                movingPatientObject.transform.Find("PatientCard(Clone)").GetComponent<Image>().maskable = false;
+                                Text[] texts = movingPatientObject.transform.Find("PatientCard(Clone)").GetComponentsInChildren<Text>(true);
+                                foreach (Text t in texts)
                                 {
-                                    Transform parent2 = parent1.parent.parent;
-                                    if (parent2 != null)
+                                    t.maskable = false;
+                                }
+                                movingPatientObject.transform.SetAsLastSibling();
+                                initialPatientPosition = movingPatientObject.transform.position;
+
+                                originalSlotObject = movingPatientObject.transform.parent.gameObject;
+                                originalSlotObject.transform.SetAsLastSibling();
+                                Transform parent1 = originalSlotObject.transform.parent;
+                                if (parent1 != null)
+                                {
+                                    parent1.SetAsLastSibling();
+                                    if (parent1.parent != null)
                                     {
-                                        parent2.SetAsLastSibling();
+                                        Transform parent2 = parent1.parent.parent;
+                                        if (parent2 != null)
+                                        {
+                                            parent2.SetAsLastSibling();
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (touchedColliders[i].gameObject.CompareTag("wardMask"))
-                        {
-                            zooming = true;
-                            scrolling = true;
-                            initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                            initialTouchPosition = rectTouchPosition;
-                            //
-                        }
-                    }
-                    if (!zooming && !scrolling && !movingPatient)
-                    {
-                        badTouch = true;
-                    }
-                }
-                else if (movingPatient)
-                {
-                    movingPatientObject.transform.position = touchPosition;
-                    movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
-                }
-                else if (scrolling)
-                {
-                    zooming = false; // not needed
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = initialScrollPosition + rectTouchPosition - initialTouchPosition;
-                    Vector2 rectPos = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                    if (rectPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
-                    {
-                        rectPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
-                    }
-                    if (rectPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
-                    {
-                        rectPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
-                    }
-                    if (rectPos.x > 0)
-                    {
-                        rectPos.x = 0;
-                    }
-                    if (rectPos.y > 0)
-                    {
-                        rectPos.y = 0;
-                    }
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = rectPos;
-                }
-                else if (zooming)
-                {
-                    scrolling = true;
-                    zooming = false;
-                    initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                    initialTouchPosition = rectTouchPosition;
-                }
-            }
-            else if (Input.touchCount == 0)
-            {
-                if (movingPatient)
-                {
-                    Collider2D[] touchedColliders = Physics2D.OverlapPointAll(movingPatientObject.transform.position);
-                    bool isOverlapPossible = true;
-                    for (int i = 0; i < touchedColliders.Length; i++)
-                    {
-                        if (touchedColliders[i].gameObject.CompareTag("wardMask"))
-                        {
-                            isOverlapPossible = false;
-                        }
-                    }
-
-
-                    bool testing = false;
-                    string testKit = "";
-                    bool changePos = false;
-                    Slot curSlot = null;
-                    for (int i = 0; i < touchedColliders.Length; i++)
-                    {
-                        if (touchedColliders[i].gameObject.name == "CommonKit")
-                        {
-                            testKit = touchedColliders[i].gameObject.name;
-                        }
-                        else if (touchedColliders[i].gameObject.name == "ExpensiveKit")
-                        {
-                            testKit = touchedColliders[i].gameObject.name;
-                        }
-                        else if (touchedColliders[i].gameObject.name == "DeluxeKit")
-                        {
-                            testKit = touchedColliders[i].gameObject.name;
-                        }
-                        if ((isOverlapPossible && touchedColliders[i].gameObject.CompareTag("slot") && !(touchedColliders[i].gameObject.name.Substring(0,4) == "Beds")) ||
-                            !isOverlapPossible && touchedColliders[i].gameObject.CompareTag("slot"))
-                        {
-                            curSlot = touchedColliders[i].gameObject.GetComponent<Slot>();
-                            if (curSlot != null && curSlot.gameObject != originalSlotObject && curSlot.numPatients < curSlot.maxNumPatients)
+                            if (touchedColliders[i].gameObject.CompareTag("wardMask"))
                             {
-                                if (curSlot.gameObject.name == "Lobby")
-                                {
-                                    testing = true;
-                                    changePos = true;
-                                }
-                                else
-                                {
-                                    originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
-                                    curSlot.addPatient(movingPatientObject);
-                                    //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                                    movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-
-                                    movingPatient = false;
-
-                                }
-                            }
-                            if (curSlot.gameObject == originalSlotObject && curSlot.gameObject.name == "Lobby")
-                            {
-                                testing = true;
-                                changePos = false;
+                                zooming = true;
+                                scrolling = true;
+                                initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                                initialTouchPosition = rectTouchPosition;
+                                //
                             }
                         }
-                        else if (isOverlapPossible && touchedColliders[i].gameObject.CompareTag("Discharge"))
+                        if (!zooming && !scrolling && !movingPatient)
                         {
-                            originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
-                            //call discharge on movingPatientObject
-                            movingPatientObject.GetComponent<Patient>().Discharge();
-                            Destroy(movingPatientObject);
-                            movingPatient = false;
+                            badTouch = true;
                         }
-
                     }
-                    if (testing)
+                    else if (movingPatient)
                     {
-                        //handleTest(testKit, movingPatientObject);
-                        //Debug.Log(testKit);
-                        //Debug.Log(testKit);
-                        int val = ShopUI.GetComponent<Store>().UseItem(testKit, movingPatientObject);
-                        if (val == 0 || !changePos)
+                        movingPatientObject.transform.position = touchPosition;
+                        movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
+                    }
+                    else if (scrolling)
+                    {
+                        zooming = false; // not needed
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = initialScrollPosition + rectTouchPosition - initialTouchPosition;
+                        Vector2 rectPos = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                        if (rectPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
                         {
-                            movingPatientObject.transform.position = initialPatientPosition;
-                            movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
-                            //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                            movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-                            movingPatient = false;
+                            rectPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
+                            rightArrow.GetComponent<Image>().enabled = false;
                         }
                         else
                         {
-                            originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
-                            curSlot.addPatient(movingPatientObject);
-                            //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                            movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-
-                            movingPatient = false;
+                            rightArrow.GetComponent<Image>().enabled = true;
                         }
+                        if (rectPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
+                        {
+                            rectPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
+                            upArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            upArrow.GetComponent<Image>().enabled = true;
 
+                        }
+                        if (rectPos.x > 0)
+                        {
+                            leftArrow.GetComponent<Image>().enabled = false;
+                            rectPos.x = 0;
+                        }
+                        else
+                        {
+                            leftArrow.GetComponent<Image>().enabled = true;
+                        }
+                        if (rectPos.y > 0)
+                        {
+                            rectPos.y = 0;
+                            downArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            downArrow.GetComponent<Image>().enabled = true;
+                        }
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = rectPos;
                     }
+                    else if (zooming)
+                    {
+                        scrolling = true;
+                        zooming = false;
+                        initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                        initialTouchPosition = rectTouchPosition;
+                    }
+                }
+                else if (Input.touchCount == 0)
+                {
                     if (movingPatient)
                     {
-                        movingPatientObject.transform.position = initialPatientPosition;
-                        movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
-                        //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                        movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-                        movingPatient = false;
-                    }
-                }
-                scrolling = false;
-                zooming = false;
-                badTouch = false;
-            }
-            else if (Input.touchCount == 2)
-            {
-                Touch touch0 = Input.GetTouch(0);
-                Touch touch1 = Input.GetTouch(1);
-                Vector2 touchPosition0 = Camera.main.ScreenToWorldPoint(touch0.position);
-                Vector2 touchPosition1 = Camera.main.ScreenToWorldPoint(touch1.position);
-                Vector2 rectTouchPosition0 = ScreenToRectPoint(touch0.position);
-                Vector2 rectTouchPosition1 = ScreenToRectPoint(touch1.position);
-                Vector2 touchCenter = (rectTouchPosition0 + rectTouchPosition1) / 2;
-                float touchDifference = (rectTouchPosition0 - rectTouchPosition1).magnitude;
-                if (!movingPatient && !zooming && !scrolling && !badTouch)
-                {
-                    bool isTouch0Good = false;
-                    bool isTouch1Good = false;
-                    Collider2D[] touchedColliders0 = Physics2D.OverlapPointAll(touchPosition0);
-                    Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
-                    for (int i = 0; i < touchedColliders0.Length; i++)
-                    {
-                        if (touchedColliders0[i].gameObject.CompareTag("wardMask"))
+                        Collider2D[] touchedColliders = Physics2D.OverlapPointAll(movingPatientObject.transform.position);
+                        bool isOverlapPossible = true;
+                        for (int i = 0; i < touchedColliders.Length; i++)
                         {
-                            isTouch0Good = true;
+                            if (touchedColliders[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isOverlapPossible = false;
+                            }
                         }
-                    }
-                    for (int i = 0; i < touchedColliders1.Length; i++)
-                    {
-                        if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+
+
+                        bool testing = false;
+                        string testKit = "";
+                        bool changePos = false;
+                        Slot curSlot = null;
+                        for (int i = 0; i < touchedColliders.Length; i++)
                         {
-                            isTouch1Good = true;
+                            if (touchedColliders[i].gameObject.name == "CommonKit")
+                            {
+                                testKit = touchedColliders[i].gameObject.name;
+                            }
+                            else if (touchedColliders[i].gameObject.name == "ExpensiveKit")
+                            {
+                                testKit = touchedColliders[i].gameObject.name;
+                            }
+                            else if (touchedColliders[i].gameObject.name == "DeluxeKit")
+                            {
+                                testKit = touchedColliders[i].gameObject.name;
+                            }
+                            if ((isOverlapPossible && touchedColliders[i].gameObject.CompareTag("slot") && !(touchedColliders[i].gameObject.name.Substring(0, 4) == "Beds")) ||
+                                !isOverlapPossible && touchedColliders[i].gameObject.CompareTag("slot"))
+                            {
+                                curSlot = touchedColliders[i].gameObject.GetComponent<Slot>();
+                                if (curSlot != null && curSlot.gameObject != originalSlotObject && curSlot.numPatients < curSlot.maxNumPatients)
+                                {
+                                    if (curSlot.gameObject.name == "Lobby")
+                                    {
+                                        testing = true;
+                                        changePos = true;
+                                    }
+                                    else
+                                    {
+                                        originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
+                                        curSlot.addPatient(movingPatientObject);
+                                        //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                                        movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+
+                                        movingPatient = false;
+
+                                    }
+                                }
+                                if (curSlot.gameObject == originalSlotObject && curSlot.gameObject.name == "Lobby")
+                                {
+                                    testing = true;
+                                    changePos = false;
+                                }
+                            }
+                            else if (isOverlapPossible && touchedColliders[i].gameObject.CompareTag("Discharge"))
+                            {
+                                originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
+                                //call discharge on movingPatientObject
+                                movingPatientObject.GetComponent<Patient>().Discharge();
+                                Destroy(movingPatientObject);
+                                movingPatient = false;
+                            }
+
                         }
-                    }
-                    if (isTouch0Good && isTouch1Good)
-                    {
-                        zooming = true;
-                        initialDoubleTouchCenter = touchCenter;
-                        initialDoubleTouchDifference = touchDifference;
-
-                        initialWardRectPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                        initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + touchCenter.x - 20, -initialWardRectPosition.y + touchCenter.y - 470);
-
-                        initialWardScale = wardContent.transform.localScale.x;
-                    }
-                    else
-                    {
-                        badTouch = true;
-                    }
-                }
-                else if (scrolling)
-                {
-                    Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
-                    bool isTouch1Good = false;
-                    for (int i = 0; i < touchedColliders1.Length; i++)
-                    {
-                        if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+                        if (testing)
                         {
-                            isTouch1Good = true;
+                            //handleTest(testKit, movingPatientObject);
+                            //Debug.Log(testKit);
+                            //Debug.Log(testKit);
+                            int val = ShopUI.GetComponent<Store>().UseItem(testKit, movingPatientObject);
+                            if (val == 0 || !changePos)
+                            {
+                                movingPatientObject.transform.position = initialPatientPosition;
+                                movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
+                                //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                                movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+                                movingPatient = false;
+                            }
+                            else
+                            {
+                                originalSlotObject.GetComponent<Slot>().removePatient(movingPatientObject);
+                                curSlot.addPatient(movingPatientObject);
+                                //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                                movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+
+                                movingPatient = false;
+                            }
+
                         }
-                    }
-                    if (isTouch1Good)
-                    {
-                        zooming = true;
-                        scrolling = false;
-                        initialWardRectPosition = initialScrollPosition;
-
-                        Vector2 newTouchCenter = (initialTouchPosition + rectTouchPosition1) / 2;
-                        initialDoubleTouchCenter = newTouchCenter;
-                        initialDoubleTouchDifference = (initialTouchPosition - rectTouchPosition1).magnitude;
-
-                        initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + newTouchCenter.x - 20, -initialWardRectPosition.y + newTouchCenter.y - 470);
-
-                        initialWardScale = wardContent.transform.localScale.x;
                         if (movingPatient)
                         {
                             movingPatientObject.transform.position = initialPatientPosition;
                             movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
                             //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
                             movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-
                             movingPatient = false;
                         }
                     }
-                    else
+                    scrolling = false;
+                    zooming = false;
+                    badTouch = false;
+                }
+                else if (Input.touchCount == 2)
+                {
+                    Touch touch0 = Input.GetTouch(0);
+                    Touch touch1 = Input.GetTouch(1);
+                    Vector2 touchPosition0 = Camera.main.ScreenToWorldPoint(touch0.position);
+                    Vector2 touchPosition1 = Camera.main.ScreenToWorldPoint(touch1.position);
+                    Vector2 rectTouchPosition0 = ScreenToRectPoint(touch0.position);
+                    Vector2 rectTouchPosition1 = ScreenToRectPoint(touch1.position);
+                    Vector2 touchCenter = (rectTouchPosition0 + rectTouchPosition1) / 2;
+                    float touchDifference = (rectTouchPosition0 - rectTouchPosition1).magnitude;
+                    if (!movingPatient && !zooming && !scrolling && !badTouch)
+                    {
+                        bool isTouch0Good = false;
+                        bool isTouch1Good = false;
+                        Collider2D[] touchedColliders0 = Physics2D.OverlapPointAll(touchPosition0);
+                        Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
+                        for (int i = 0; i < touchedColliders0.Length; i++)
+                        {
+                            if (touchedColliders0[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch0Good = true;
+                            }
+                        }
+                        for (int i = 0; i < touchedColliders1.Length; i++)
+                        {
+                            if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch1Good = true;
+                            }
+                        }
+                        if (isTouch0Good && isTouch1Good)
+                        {
+                            zooming = true;
+                            initialDoubleTouchCenter = touchCenter;
+                            initialDoubleTouchDifference = touchDifference;
+
+                            initialWardRectPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                            initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + touchCenter.x - 20, -initialWardRectPosition.y + touchCenter.y - 470);
+
+                            initialWardScale = wardContent.transform.localScale.x;
+                        }
+                        else
+                        {
+                            badTouch = true;
+                        }
+                    }
+                    else if (scrolling)
+                    {
+                        Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
+                        bool isTouch1Good = false;
+                        for (int i = 0; i < touchedColliders1.Length; i++)
+                        {
+                            if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch1Good = true;
+                            }
+                        }
+                        if (isTouch1Good)
+                        {
+                            zooming = true;
+                            scrolling = false;
+                            initialWardRectPosition = initialScrollPosition;
+
+                            Vector2 newTouchCenter = (initialTouchPosition + rectTouchPosition1) / 2;
+                            initialDoubleTouchCenter = newTouchCenter;
+                            initialDoubleTouchDifference = (initialTouchPosition - rectTouchPosition1).magnitude;
+
+                            initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + newTouchCenter.x - 20, -initialWardRectPosition.y + newTouchCenter.y - 470);
+
+                            initialWardScale = wardContent.transform.localScale.x;
+                            if (movingPatient)
+                            {
+                                movingPatientObject.transform.position = initialPatientPosition;
+                                movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
+                                //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                                movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+
+                                movingPatient = false;
+                            }
+                        }
+                        else
+                        {
+                            movingPatientObject.transform.position = initialPatientPosition;
+                            movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
+                            //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                            movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+
+                            movingPatient = false;
+                            badTouch = true;
+                            zooming = false;
+                            scrolling = false;
+                        }
+                    }
+                    else if (zooming)
+                    {
+                        float scale = touchDifference / initialDoubleTouchDifference;
+                        wardContent.transform.localScale = Vector3.one * scale * initialWardScale;
+                        if (wardContent.transform.localScale.x > maxZoom)
+                        {
+                            wardContent.transform.localScale = Vector3.one * maxZoom;
+                        }
+                        if (wardContent.transform.localScale.x < minZoom)
+                        {
+                            wardContent.transform.localScale = Vector3.one * minZoom;//new Vector3(minZoom, minZoom, minZoom);
+                        }
+                        scale = wardContent.transform.localScale.x / initialWardScale;
+                        Vector2 currentPosOfInitialTouchedPos = initialWardTouchedPosition * scale;
+                        //Vector2 rPos = GetComponent<RectTransform>().anchoredPosition;
+                        Vector2 newRPos = initialWardRectPosition + initialWardTouchedPosition - currentPosOfInitialTouchedPos + touchCenter - initialDoubleTouchCenter;// new Vector2(initialWardRectPosition.x + currentPosOfInitialTouchedPos.x - initialWardTouchedPosition.x, initialWardRectPosition.y - currentPosOfInitialTouchedPos.y + initialWardTouchedPosition.y) + touchCenter - initialDoubleTouchCenter;
+                        if (newRPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
+                        {
+                            newRPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
+                            rightArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            rightArrow.GetComponent<Image>().enabled = true;
+                        }
+                        if (newRPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
+                        {
+                            newRPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
+                            upArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            upArrow.GetComponent<Image>().enabled = true;
+                        }
+                        if (newRPos.x > 0)
+                        {
+                            newRPos.x = 0;
+                            leftArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            leftArrow.GetComponent<Image>().enabled = true;
+                        }
+                        if (newRPos.y > 0)
+                        {
+                            newRPos.y = 0;
+                            downArrow.GetComponent<Image>().enabled = false;
+                        }
+                        else
+                        {
+                            downArrow.GetComponent<Image>().enabled = true;
+                        }
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = newRPos;
+                    }
+                    else if (movingPatient)
                     {
                         movingPatientObject.transform.position = initialPatientPosition;
                         movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
@@ -903,448 +992,431 @@ public class MainScript : MonoBehaviour
 
                         movingPatient = false;
                         badTouch = true;
-                        zooming = false;
-                        scrolling = false;
-                    }
-                }
-                else if (zooming)
-                {
-                    float scale = touchDifference / initialDoubleTouchDifference;
-                    wardContent.transform.localScale = Vector3.one * scale * initialWardScale;
-                    if (wardContent.transform.localScale.x > maxZoom)
-                    {
-                        wardContent.transform.localScale = Vector3.one * maxZoom;
-                    }
-                    if (wardContent.transform.localScale.x < minZoom)
-                    {
-                        wardContent.transform.localScale = Vector3.one * minZoom;//new Vector3(minZoom, minZoom, minZoom);
-                    }
-                    scale = wardContent.transform.localScale.x / initialWardScale;
-                    Vector2 currentPosOfInitialTouchedPos = initialWardTouchedPosition * scale;
-                    //Vector2 rPos = GetComponent<RectTransform>().anchoredPosition;
-                    Vector2 newRPos = initialWardRectPosition + initialWardTouchedPosition - currentPosOfInitialTouchedPos + touchCenter - initialDoubleTouchCenter;// new Vector2(initialWardRectPosition.x + currentPosOfInitialTouchedPos.x - initialWardTouchedPosition.x, initialWardRectPosition.y - currentPosOfInitialTouchedPos.y + initialWardTouchedPosition.y) + touchCenter - initialDoubleTouchCenter;
-                    if (newRPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
-                    {
-                        newRPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
-                    }
-                    if (newRPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
-                    {
-                        newRPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
-                    }
-                    if (newRPos.x > 0)
-                    {
-                        newRPos.x = 0;
-                    }
-                    if (newRPos.y > 0)
-                    {
-                        newRPos.y = 0;
-                    }
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = newRPos;
-                }
-                else if (movingPatient)
-                {
-                    movingPatientObject.transform.position = initialPatientPosition;
-                    movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
-                    //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                    movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
 
-                    movingPatient = false;
+                    }
+                }
+                else if (Input.touchCount > 2)
+                {
+                    if (movingPatient)
+                    {
+                        movingPatientObject.transform.position = initialPatientPosition;
+                        movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
+                        //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
+                        movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
+
+                        movingPatient = false;
+                    }
                     badTouch = true;
-
+                    zooming = false;
+                    scrolling = false;
                 }
             }
-            else if (Input.touchCount > 2)
+            else
             {
-                if (movingPatient)
+                if (Input.touchCount == 1)
                 {
-                    movingPatientObject.transform.position = initialPatientPosition;
-                    movingPatientObject.GetComponent<RectTransform>().anchoredPosition3D = movingPatientObject.GetComponent<RectTransform>().anchoredPosition;
-                    //movingPatientObject.transform.GetComponentInChildren<Image>().maskable = true;
-                    movingPatientObject.transform.Find("PatientCharacter(Clone)").GetComponent<Image>().maskable = true;
-
-                    movingPatient = false;
-                }
-                badTouch = true;
-                zooming = false;
-                scrolling = false;
-            }
-        }
-        else
-        {
-            if (Input.touchCount == 1)
-            {
-                Touch touch = Input.GetTouch(0);
-                Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
-                Vector2 rectTouchPosition = ScreenToRectPoint(touch.position);
-                if (!scrolling && !badTouch && !zooming)
-                {
-
-                    Collider2D[] touchedColliders = Physics2D.OverlapPointAll(touchPosition);
-                    for (int i = 0; i < touchedColliders.Length; i++)
+                    Touch touch = Input.GetTouch(0);
+                    Vector2 touchPosition = Camera.main.ScreenToWorldPoint(touch.position);
+                    Vector2 rectTouchPosition = ScreenToRectPoint(touch.position);
+                    if (!scrolling && !badTouch && !zooming)
                     {
-                        if (touchedColliders[i].gameObject.CompareTag("wardMask"))
+
+                        Collider2D[] touchedColliders = Physics2D.OverlapPointAll(touchPosition);
+                        for (int i = 0; i < touchedColliders.Length; i++)
+                        {
+                            if (touchedColliders[i].gameObject.CompareTag("wardMask"))
+                            {
+                                zooming = true;
+                                scrolling = true;
+                                initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                                initialTouchPosition = rectTouchPosition;
+                                //
+                            }
+                        }
+                        if (!zooming && !scrolling)
+                        {
+                            badTouch = true;
+                        }
+                    }
+                    else if (scrolling)
+                    {
+                        zooming = false; // not needed
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = initialScrollPosition + rectTouchPosition - initialTouchPosition;
+                        Vector2 rectPos = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                        if (rectPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
+                        {
+                            rectPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
+                        }
+                        if (rectPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
+                        {
+                            rectPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
+                        }
+                        if (rectPos.x > 0)
+                        {
+                            rectPos.x = 0;
+                        }
+                        if (rectPos.y > 0)
+                        {
+                            rectPos.y = 0;
+                        }
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = rectPos;
+                    }
+                    else if (zooming)
+                    {
+                        scrolling = true;
+                        zooming = false;
+                        initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                        initialTouchPosition = rectTouchPosition;
+                    }
+                }
+                else if (Input.touchCount == 0)
+                {
+                    scrolling = false;
+                    zooming = false;
+                    badTouch = false;
+                }
+                else if (Input.touchCount == 2)
+                {
+                    Touch touch0 = Input.GetTouch(0);
+                    Touch touch1 = Input.GetTouch(1);
+                    Vector2 touchPosition0 = Camera.main.ScreenToWorldPoint(touch0.position);
+                    Vector2 touchPosition1 = Camera.main.ScreenToWorldPoint(touch1.position);
+                    Vector2 rectTouchPosition0 = ScreenToRectPoint(touch0.position);
+                    Vector2 rectTouchPosition1 = ScreenToRectPoint(touch1.position);
+                    Vector2 touchCenter = (rectTouchPosition0 + rectTouchPosition1) / 2;
+                    float touchDifference = (rectTouchPosition0 - rectTouchPosition1).magnitude;
+                    if (!movingPatient && !zooming && !scrolling && !badTouch)
+                    {
+                        bool isTouch0Good = false;
+                        bool isTouch1Good = false;
+                        Collider2D[] touchedColliders0 = Physics2D.OverlapPointAll(touchPosition0);
+                        Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
+                        for (int i = 0; i < touchedColliders0.Length; i++)
+                        {
+                            if (touchedColliders0[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch0Good = true;
+                            }
+                        }
+                        for (int i = 0; i < touchedColliders1.Length; i++)
+                        {
+                            if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch1Good = true;
+                            }
+                        }
+                        if (isTouch0Good && isTouch1Good)
                         {
                             zooming = true;
-                            scrolling = true;
-                            initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                            initialTouchPosition = rectTouchPosition;
-                            //
+                            initialDoubleTouchCenter = touchCenter;
+                            initialDoubleTouchDifference = touchDifference;
+
+                            initialWardRectPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
+                            initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + touchCenter.x - 20, -initialWardRectPosition.y + touchCenter.y - 470);
+
+                            initialWardScale = wardContent.transform.localScale.x;
+                        }
+                        else
+                        {
+                            badTouch = true;
                         }
                     }
-                    if (!zooming && !scrolling)
+                    else if (scrolling)
                     {
-                        badTouch = true;
+                        Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
+                        bool isTouch1Good = false;
+                        for (int i = 0; i < touchedColliders1.Length; i++)
+                        {
+                            if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
+                            {
+                                isTouch1Good = true;
+                            }
+                        }
+                        if (isTouch1Good)
+                        {
+                            zooming = true;
+                            scrolling = false;
+                            initialWardRectPosition = initialScrollPosition;
+
+                            Vector2 newTouchCenter = (initialTouchPosition + rectTouchPosition1) / 2;
+                            initialDoubleTouchCenter = newTouchCenter;
+                            initialDoubleTouchDifference = (initialTouchPosition - rectTouchPosition1).magnitude;
+
+                            initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + newTouchCenter.x - 20, -initialWardRectPosition.y + newTouchCenter.y - 470);
+
+                            initialWardScale = wardContent.transform.localScale.x;
+
+                        }
+                        else
+                        {
+                            badTouch = true;
+                            zooming = false;
+                            scrolling = false;
+                        }
+                    }
+                    else if (zooming)
+                    {
+                        float scale = touchDifference / initialDoubleTouchDifference;
+                        wardContent.transform.localScale = Vector3.one * scale * initialWardScale;
+                        if (wardContent.transform.localScale.x > maxZoom)
+                        {
+                            wardContent.transform.localScale = Vector3.one * maxZoom;
+                        }
+                        if (wardContent.transform.localScale.x < minZoom)
+                        {
+                            wardContent.transform.localScale = Vector3.one * minZoom;//new Vector3(minZoom, minZoom, minZoom);
+                        }
+                        scale = wardContent.transform.localScale.x / initialWardScale;
+                        Vector2 currentPosOfInitialTouchedPos = initialWardTouchedPosition * scale;
+                        //Vector2 rPos = GetComponent<RectTransform>().anchoredPosition;
+                        Vector2 newRPos = initialWardRectPosition + initialWardTouchedPosition - currentPosOfInitialTouchedPos + touchCenter - initialDoubleTouchCenter;// new Vector2(initialWardRectPosition.x + currentPosOfInitialTouchedPos.x - initialWardTouchedPosition.x, initialWardRectPosition.y - currentPosOfInitialTouchedPos.y + initialWardTouchedPosition.y) + touchCenter - initialDoubleTouchCenter;
+                        if (newRPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
+                        {
+                            newRPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
+                        }
+                        if (newRPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
+                        {
+                            newRPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
+                        }
+                        if (newRPos.x > 0)
+                        {
+                            newRPos.x = 0;
+                        }
+                        if (newRPos.y > 0)
+                        {
+                            newRPos.y = 0;
+                        }
+                        wardContent.GetComponent<RectTransform>().anchoredPosition = newRPos;
                     }
                 }
-                else if (scrolling)
+                else if (Input.touchCount > 2)
                 {
-                    zooming = false; // not needed
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = initialScrollPosition + rectTouchPosition - initialTouchPosition;
-                    Vector2 rectPos = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                    if (rectPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
-                    {
-                        rectPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
-                    }
-                    if (rectPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
-                    {
-                        rectPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
-                    }
-                    if (rectPos.x > 0)
-                    {
-                        rectPos.x = 0;
-                    }
-                    if (rectPos.y > 0)
-                    {
-                        rectPos.y = 0;
-                    }
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = rectPos;
-                }
-                else if (zooming)
-                {
-                    scrolling = true;
+                    badTouch = true;
                     zooming = false;
-                    initialScrollPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                    initialTouchPosition = rectTouchPosition;
+                    scrolling = false;
                 }
+
+                //item logic
+                if (activeCard != null)
+                {
+                    activeCard.SetActive(false);
+                    activeCard.GetComponent<Image>().maskable = false;
+                    Text[] texts = activeCard.GetComponentsInChildren<Text>(true);
+                    foreach (Text t in texts)
+                    {
+                        t.maskable = true;
+                    }
+                }
+
+                if (Input.touchCount == 1)
+                {
+                    Touch touch = Input.GetTouch(0);
+                    Vector2 touchWorldPosition = Camera.main.ScreenToWorldPoint(touch.position);
+                    if (touch.phase == TouchPhase.Began)
+                    {
+                        Collider2D[] itemColliders = Physics2D.OverlapPointAll(touchWorldPosition);
+                        foreach (Collider2D itemCollider in itemColliders)
+                        {
+                            if (itemCollider.gameObject.CompareTag("item"))
+                            {
+                                itemObj = itemCollider.gameObject;
+                                fullItemObj = itemObj.transform.parent.gameObject;
+                                if (int.Parse(fullItemObj.transform.Find("Use").Find("quantity").GetComponent<Text>().text) != 0 && itemObj.transform.Find("nameText").GetComponent<Text>().text != "Add Room")
+                                {
+                                    fullItemObj.transform.SetAsLastSibling();
+                                    itemInitialWorldPosition = itemObj.transform.position;
+                                    applying = true;
+                                }
+                            }
+                        }
+                    }
+                    if (touch.phase == TouchPhase.Stationary && applying)
+                    {
+                        Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
+                        bool doThis = false;
+                        bool actuallyDoThis = false;
+                        foreach (Collider2D collider in Colliders)
+                        {
+                            if (collider.gameObject.CompareTag("wardMask"))
+                            {
+                                doThis = true;
+                            }
+                            if (collider.gameObject.CompareTag("patient"))
+                            {
+                                actuallyDoThis = true;
+                                activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
+                            }
+
+                        }
+                        if (doThis && actuallyDoThis && fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient)
+                        {
+                            activeCard.SetActive(true);
+                            //activeCard.transform.parent.SetAsLastSibling();//fullPatient
+                            activeCard.transform.parent.parent.SetAsLastSibling();//beds
+                            activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
+                            activeCard.GetComponent<Image>().maskable = true;
+                            Text[] texts = activeCard.GetComponentsInChildren<Text>(true);
+                            foreach(Text t in texts)
+                            {
+                                t.maskable = true;
+                            }
+                        }
+                    }
+                    else if (touch.phase == TouchPhase.Stationary)
+                    {
+                        Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
+                        bool doThis = false;
+                        bool actuallyDoThis = false;
+                        foreach (Collider2D collider in Colliders)
+                        {
+                            if (collider.gameObject.CompareTag("wardMask"))
+                            {
+                                doThis = true;
+                            }
+                            if (collider.gameObject.CompareTag("patient"))
+                            {
+                                actuallyDoThis = true;
+                                activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
+                            }
+
+                        }
+                        if (doThis && actuallyDoThis)
+                        {
+                            activeCard.SetActive(true);
+                            //activeCard.transform.parent.SetAsLastSibling();//fullPatient
+                            activeCard.transform.parent.parent.SetAsLastSibling();//beds
+                            activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
+                            activeCard.GetComponent<Image>().maskable = true;
+                            Text[] texts = activeCard.GetComponentsInChildren<Text>(true);
+                            foreach (Text t in texts)
+                            {
+                                t.maskable = true;
+                            }
+                        }
+                    }
+
+                    if (touch.phase == TouchPhase.Moved && applying)
+                    {
+                        Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
+                        bool doThis = false;
+                        bool actuallyDoThis = false;
+                        foreach (Collider2D collider in Colliders)
+                        {
+                            if (collider.gameObject.CompareTag("wardMask"))
+                            {
+                                doThis = true;
+                            }
+                            if (collider.gameObject.CompareTag("patient"))
+                            {
+                                actuallyDoThis = true;
+                                activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
+                            }
+
+                        }
+                        if (doThis && actuallyDoThis && fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient)
+                        {
+                            activeCard.SetActive(true);
+                            //activeCard.transform.parent.SetAsLastSibling();//fullPatient
+                            activeCard.transform.parent.parent.SetAsLastSibling();//beds
+                            activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
+                            activeCard.GetComponent<Image>().maskable = true;
+                            Text[] texts = activeCard.GetComponentsInChildren<Text>(true);
+                            foreach (Text t in texts)
+                            {
+                                t.maskable = true;
+                            }
+                        }
+                        itemObj.transform.position = touchWorldPosition;
+                        itemObj.GetComponent<RectTransform>().anchoredPosition3D = itemObj.GetComponent<RectTransform>().anchoredPosition;
+                    }
+                    else if (touch.phase == TouchPhase.Moved)
+                    {
+                        Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
+                        bool doThis = false;
+                        bool actuallyDoThis = false;
+                        foreach (Collider2D collider in Colliders)
+                        {
+                            if (collider.gameObject.CompareTag("wardMask"))
+                            {
+                                doThis = true;
+                            }
+                            if (collider.gameObject.CompareTag("patient"))
+                            {
+                                actuallyDoThis = true;
+                                activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
+                            }
+
+                        }
+                        if (doThis && actuallyDoThis)
+                        {
+                            activeCard.SetActive(true);
+                            //activeCard.transform.parent.SetAsLastSibling();//fullPatient
+                            activeCard.transform.parent.parent.SetAsLastSibling();//beds
+                            activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
+                            activeCard.GetComponent<Image>().maskable = true;
+                            Text[] texts = activeCard.GetComponentsInChildren<Text>(true);
+                            foreach (Text t in texts)
+                            {
+                                t.maskable = true;
+                            }
+                        }
+                    }
+                    if (touch.phase == TouchPhase.Ended && applying)
+                    {
+                        Collider2D[] patientColliders = Physics2D.OverlapPointAll(touchWorldPosition);
+
+
+                        bool apply = false;
+                        bool patientApply = false;
+                        GameObject patientObj = null;
+                        bool wardApply = false;
+                        GameObject wardObj = null;
+                        foreach (Collider2D collider in patientColliders)
+                        {
+                            if (collider.gameObject.CompareTag("wardMask"))
+                            {
+                                apply = true;
+                            }
+                            if (collider.gameObject.CompareTag("patient"))
+                            {
+                                patientObj = collider.gameObject;
+                                patientApply = true;
+                            }
+                            if (collider.gameObject.name.Substring(0, 4) == "Beds")
+                            {
+                                wardObj = collider.gameObject.transform.parent.gameObject;
+                                wardApply = true;
+
+                            }
+                        }
+                        if (apply)
+                        {
+                            if (fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Ward && wardApply)
+                            {
+                                ShopUI.GetComponent<Store>().UseItem(Store.itemNameFromGameItem[itemObj.transform.Find("nameText").GetComponent<Text>().text], wardObj);//wardObj to be used as input too
+                                                                                                                                                                        //Debug.Log("applied item on Ward");
+                            }
+                            if (fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient && patientApply)
+                            {
+                                ShopUI.GetComponent<Store>().UseItem(Store.itemNameFromGameItem[itemObj.transform.Find("nameText").GetComponent<Text>().text], patientObj);//patientObj to be used as input too
+                                                                                                                                                                           //Debug.Log("applied item on Patient");
+
+                            }
+                        }
+
+                        itemObj.transform.position = itemInitialWorldPosition;
+                        itemObj.GetComponent<RectTransform>().anchoredPosition3D = itemObj.GetComponent<RectTransform>().anchoredPosition;
+                        applying = false;
+                    }
+                }
+
             }
-            else if (Input.touchCount == 0)
+            if (!movingPatient)
             {
-                scrolling = false;
-                zooming = false;
-                badTouch = false;
+                Testing.SetActive(false);
             }
-            else if (Input.touchCount == 2)
-            {
-                Touch touch0 = Input.GetTouch(0);
-                Touch touch1 = Input.GetTouch(1);
-                Vector2 touchPosition0 = Camera.main.ScreenToWorldPoint(touch0.position);
-                Vector2 touchPosition1 = Camera.main.ScreenToWorldPoint(touch1.position);
-                Vector2 rectTouchPosition0 = ScreenToRectPoint(touch0.position);
-                Vector2 rectTouchPosition1 = ScreenToRectPoint(touch1.position);
-                Vector2 touchCenter = (rectTouchPosition0 + rectTouchPosition1) / 2;
-                float touchDifference = (rectTouchPosition0 - rectTouchPosition1).magnitude;
-                if (!movingPatient && !zooming && !scrolling && !badTouch)
-                {
-                    bool isTouch0Good = false;
-                    bool isTouch1Good = false;
-                    Collider2D[] touchedColliders0 = Physics2D.OverlapPointAll(touchPosition0);
-                    Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
-                    for (int i = 0; i < touchedColliders0.Length; i++)
-                    {
-                        if (touchedColliders0[i].gameObject.CompareTag("wardMask"))
-                        {
-                            isTouch0Good = true;
-                        }
-                    }
-                    for (int i = 0; i < touchedColliders1.Length; i++)
-                    {
-                        if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
-                        {
-                            isTouch1Good = true;
-                        }
-                    }
-                    if (isTouch0Good && isTouch1Good)
-                    {
-                        zooming = true;
-                        initialDoubleTouchCenter = touchCenter;
-                        initialDoubleTouchDifference = touchDifference;
-
-                        initialWardRectPosition = wardContent.GetComponent<RectTransform>().anchoredPosition;
-                        initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + touchCenter.x - 20, -initialWardRectPosition.y + touchCenter.y - 470);
-
-                        initialWardScale = wardContent.transform.localScale.x;
-                    }
-                    else
-                    {
-                        badTouch = true;
-                    }
-                }
-                else if (scrolling)
-                {
-                    Collider2D[] touchedColliders1 = Physics2D.OverlapPointAll(touchPosition1);
-                    bool isTouch1Good = false;
-                    for (int i = 0; i < touchedColliders1.Length; i++)
-                    {
-                        if (touchedColliders1[i].gameObject.CompareTag("wardMask"))
-                        {
-                            isTouch1Good = true;
-                        }
-                    }
-                    if (isTouch1Good)
-                    {
-                        zooming = true;
-                        scrolling = false;
-                        initialWardRectPosition = initialScrollPosition;
-
-                        Vector2 newTouchCenter = (initialTouchPosition + rectTouchPosition1) / 2;
-                        initialDoubleTouchCenter = newTouchCenter;
-                        initialDoubleTouchDifference = (initialTouchPosition - rectTouchPosition1).magnitude;
-
-                        initialWardTouchedPosition = new Vector2(-initialWardRectPosition.x + newTouchCenter.x - 20, -initialWardRectPosition.y + newTouchCenter.y - 470);
-
-                        initialWardScale = wardContent.transform.localScale.x;
-                        
-                    }
-                    else
-                    {
-                        badTouch = true;
-                        zooming = false;
-                        scrolling = false;
-                    }
-                }
-                else if (zooming)
-                {
-                    float scale = touchDifference / initialDoubleTouchDifference;
-                    wardContent.transform.localScale = Vector3.one * scale * initialWardScale;
-                    if (wardContent.transform.localScale.x > maxZoom)
-                    {
-                        wardContent.transform.localScale = Vector3.one * maxZoom;
-                    }
-                    if (wardContent.transform.localScale.x < minZoom)
-                    {
-                        wardContent.transform.localScale = Vector3.one * minZoom;//new Vector3(minZoom, minZoom, minZoom);
-                    }
-                    scale = wardContent.transform.localScale.x / initialWardScale;
-                    Vector2 currentPosOfInitialTouchedPos = initialWardTouchedPosition * scale;
-                    //Vector2 rPos = GetComponent<RectTransform>().anchoredPosition;
-                    Vector2 newRPos = initialWardRectPosition + initialWardTouchedPosition - currentPosOfInitialTouchedPos + touchCenter - initialDoubleTouchCenter;// new Vector2(initialWardRectPosition.x + currentPosOfInitialTouchedPos.x - initialWardTouchedPosition.x, initialWardRectPosition.y - currentPosOfInitialTouchedPos.y + initialWardTouchedPosition.y) + touchCenter - initialDoubleTouchCenter;
-                    if (newRPos.x < windowWidth - hospitalWidth * wardContent.transform.localScale.x)
-                    {
-                        newRPos.x = windowWidth - hospitalWidth * wardContent.transform.localScale.x;
-                    }
-                    if (newRPos.y < windowHeight - hospitalHeight * wardContent.transform.localScale.x)
-                    {
-                        newRPos.y = windowHeight - hospitalHeight * wardContent.transform.localScale.x;
-                    }
-                    if (newRPos.x > 0)
-                    {
-                        newRPos.x = 0;
-                    }
-                    if (newRPos.y > 0)
-                    {
-                        newRPos.y = 0;
-                    }
-                    wardContent.GetComponent<RectTransform>().anchoredPosition = newRPos;
-                }
-            }
-            else if (Input.touchCount > 2)
-            {
-                badTouch = true;
-                zooming = false;
-                scrolling = false;
-            }
-
-            //item logic
-            if(activeCard != null)
-            {
-                activeCard.SetActive(false);
-                activeCard.GetComponent<Image>().maskable = false;
-            }
-
-            if (Input.touchCount == 1)
-            {
-                Touch touch = Input.GetTouch(0);
-                Vector2 touchWorldPosition = Camera.main.ScreenToWorldPoint(touch.position);
-                if (touch.phase == TouchPhase.Began)
-                {
-                    Collider2D[] itemColliders = Physics2D.OverlapPointAll(touchWorldPosition);
-                    foreach(Collider2D itemCollider in itemColliders)
-                    {
-                        if (itemCollider.gameObject.CompareTag("item"))
-                        {
-                            itemObj = itemCollider.gameObject;
-                            fullItemObj = itemObj.transform.parent.gameObject;
-                            fullItemObj.transform.SetAsLastSibling();
-                            itemInitialWorldPosition = itemObj.transform.position;
-                            applying = true;
-                        }
-                    }
-                }
-                if (touch.phase == TouchPhase.Stationary && applying)
-                {
-                    Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
-                    bool doThis = false;
-                    bool actuallyDoThis = false;
-                    foreach (Collider2D collider in Colliders)
-                    {
-                        if (collider.gameObject.CompareTag("wardMask"))
-                        {
-                            doThis = true;
-                        }
-                        if (collider.gameObject.CompareTag("patient"))
-                        {
-                            actuallyDoThis = true;
-                            activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
-                        }
-
-                    }
-                    if (doThis && actuallyDoThis && fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient)
-                    {
-                        activeCard.SetActive(true);
-                        //activeCard.transform.parent.SetAsLastSibling();//fullPatient
-                        activeCard.transform.parent.parent.SetAsLastSibling();//beds
-                        activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
-                        activeCard.GetComponent<Image>().maskable = true;
-                    }
-                }
-                else if (touch.phase == TouchPhase.Stationary)
-                {
-                    Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
-                    bool doThis = false;
-                    bool actuallyDoThis = false;
-                    foreach (Collider2D collider in Colliders)
-                    {
-                        if (collider.gameObject.CompareTag("wardMask"))
-                        {
-                            doThis = true;
-                        }
-                        if (collider.gameObject.CompareTag("patient"))
-                        {
-                            actuallyDoThis = true;
-                            activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
-                        }
-
-                    }
-                    if (doThis && actuallyDoThis)
-                    {
-                        activeCard.SetActive(true);
-                        //activeCard.transform.parent.SetAsLastSibling();//fullPatient
-                        activeCard.transform.parent.parent.SetAsLastSibling();//beds
-                        activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
-                        activeCard.GetComponent<Image>().maskable = true;
-                    }
-                }
-                
-                if(touch.phase == TouchPhase.Moved && applying)
-                {
-                    Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
-                    bool doThis= false;
-                    bool actuallyDoThis = false;
-                    foreach (Collider2D collider in Colliders)
-                    {
-                        if (collider.gameObject.CompareTag("wardMask"))
-                        {
-                            doThis = true;
-                        }
-                        if (collider.gameObject.CompareTag("patient"))
-                        {
-                            actuallyDoThis = true;
-                            activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
-                        }
-                    
-                    }
-                    if (doThis && actuallyDoThis && fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient)
-                    {
-                        activeCard.SetActive(true);
-                        //activeCard.transform.parent.SetAsLastSibling();//fullPatient
-                        activeCard.transform.parent.parent.SetAsLastSibling();//beds
-                        activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
-                        activeCard.GetComponent<Image>().maskable = true;
-                    }
-                    itemObj.transform.position = touchWorldPosition;
-                    itemObj.GetComponent<RectTransform>().anchoredPosition3D = itemObj.GetComponent<RectTransform>().anchoredPosition;
-                }
-                else if (touch.phase == TouchPhase.Moved)
-                {
-                    Collider2D[] Colliders = Physics2D.OverlapPointAll(touchWorldPosition);
-                    bool doThis = false;
-                    bool actuallyDoThis = false;
-                    foreach (Collider2D collider in Colliders)
-                    {
-                        if (collider.gameObject.CompareTag("wardMask"))
-                        {
-                            doThis = true;
-                        }
-                        if (collider.gameObject.CompareTag("patient"))
-                        {
-                            actuallyDoThis = true;
-                            activeCard = collider.gameObject.GetComponentsInChildren<dummy>(true)[0].gameObject;
-                        }
-
-                    }
-                    if (doThis && actuallyDoThis)
-                    {
-                        activeCard.SetActive(true);
-                        //activeCard.transform.parent.SetAsLastSibling();//fullPatient
-                        activeCard.transform.parent.parent.SetAsLastSibling();//beds
-                        activeCard.transform.parent.parent.parent.SetAsLastSibling();//room
-                        activeCard.GetComponent<Image>().maskable = true;
-                    }
-                }
-                if (touch.phase == TouchPhase.Ended && applying)
-                {
-                    Collider2D[] patientColliders = Physics2D.OverlapPointAll(touchWorldPosition);
-
-
-                    bool apply = false;
-                    bool patientApply = false;
-                    GameObject patientObj = null;
-                    bool wardApply = false;
-                    GameObject wardObj = null;
-                    foreach (Collider2D collider in patientColliders)
-                    {
-                        if (collider.gameObject.CompareTag("wardMask"))
-                        {
-                            apply = true;
-                        }
-                        if (collider.gameObject.CompareTag("patient"))
-                        {
-                            patientObj = collider.gameObject;
-                            patientApply = true;
-                        }
-                        if (collider.gameObject.name.Substring(0,4) == "Beds")
-                        {
-                            wardObj = collider.gameObject.transform.parent.gameObject;
-                            wardApply = true;
-                            
-                        }
-                    }
-                    if (apply)
-                    {
-                        if(fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Ward && wardApply)
-                        {
-                            ShopUI.GetComponent<Store>().UseItem(Store.itemNameFromGameItem[itemObj.transform.Find("nameText").GetComponent<Text>().text], wardObj);//wardObj to be used as input too
-                            Debug.Log("applied item on Ward");
-                        }
-                        if(fullItemObj.GetComponent<itemScript>().toBeAppliedOn == itemScript.ApplyOn.Patient && patientApply)
-                        {
-                            ShopUI.GetComponent<Store>().UseItem(Store.itemNameFromGameItem[itemObj.transform.Find("nameText").GetComponent<Text>().text], patientObj);//patientObj to be used as input too
-                            Debug.Log("applied item on Patient");
-
-                        }
-                    }
-
-                    itemObj.transform.position = itemInitialWorldPosition;
-                    itemObj.GetComponent<RectTransform>().anchoredPosition3D = itemObj.GetComponent<RectTransform>().anchoredPosition;
-                    applying = false;
-                }
-            }
-
         }
-        if (!movingPatient)
-        {
-            Testing.SetActive(false);
-        }
+
         
     }
 }

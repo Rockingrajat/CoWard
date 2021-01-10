@@ -10,12 +10,10 @@ public class SaveData
     public float startTime, lastUpdate, alpha;
     public float currentTime;
     public int score;
-    public float rating;
-    public int totalTime, level;
+    public float rating, spawnInterval;
+    public int totalTime, level, waitingRoom_penalty;
     
-    //public int level;
-
-    public SaveData(float[] patientArray, int[] inventory, int[] failure_ins, int lastRoom, float startTime, float lastUpdate,float alpha, float currentTime, int score, float rating, int totalTime, int level)
+    public SaveData(float[] patientArray, int[] inventory, int[] failure_ins, int lastRoom, float startTime, float lastUpdate,float alpha, float currentTime, int score, float rating, int totalTime, int level, float spawnInterval, int waitingRoom_penalty)
     {
         
         this.lastRoom = lastRoom;
@@ -30,6 +28,8 @@ public class SaveData
         this.rating = rating;
         this.totalTime = totalTime;
         this.level = level;
+        this.spawnInterval = spawnInterval;
+        this.waitingRoom_penalty = waitingRoom_penalty;
         /*this.oneDLengthOfGrid = oneDLengthOfGrid;
         this.numberOfWords = numberOfWords;
         this.difficulty = difficulty;
@@ -57,4 +57,5 @@ public class SaveData
             this.isRandomChar[i] = isRandomChar[i];
         }*/
     }
+   
 }

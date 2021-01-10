@@ -5,10 +5,10 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 public class LevelScript : MonoBehaviour
 {
-    int maxLevel = 15;
+    int maxLevel = 5;
     [SerializeField] GameObject levelPrefab;
     [SerializeField] GameObject canvas;
-    [SerializeField] GameObject mainCamera;
+    
     float verticalHorizontalGap = 30;
     float heightOfCard = 260;
     float widthOfCard = 240;
@@ -16,27 +16,31 @@ public class LevelScript : MonoBehaviour
     float viewPortWidth = 900;
     float reservedHeight = 320;
     float reservedWidth = 300;
-    
+    int max_levels = 15;
     public void startLevel(int level)
     {
-        Debug.Log("LoadLevel" + " " + level.ToString());
+        //Debug.Log("LoadLevel" + " " + level.ToString());
         int num_patients =  0, num_failures = 0, total_time=0, lastRoom=0, score = 500;
+        float spawnInterval=5;
+        int waitingRoompenalty = 30;
         //Add speed
         switch(level){
             default:
                 break;
             case 1:
-                num_patients = 0;
-                num_failures = 0;
+                num_patients = 4;
+                num_failures = 2;
                 total_time = 2;
                 lastRoom = 102;
+                spawnInterval = 15;
                 break;
             case 2:
-                num_patients = 2;
+                num_patients = 6;
                 num_failures = 0;
                 total_time = 2;
                 lastRoom = 103;
                 score = 1000;
+                spawnInterval = 13;
                 break;
             case 3:
                 num_patients = 3;
@@ -44,6 +48,7 @@ public class LevelScript : MonoBehaviour
                 total_time = 3;
                 lastRoom = 104;
                 score = 1000;
+                spawnInterval = 10;
                 break;
             case 4:
                 num_patients = 5;
@@ -51,6 +56,7 @@ public class LevelScript : MonoBehaviour
                 total_time = 4;
                 lastRoom = 204;
                 score = 1500;
+                spawnInterval = 7;
                 break;
             case 5:
                 num_patients = 8;
@@ -58,11 +64,13 @@ public class LevelScript : MonoBehaviour
                 total_time = 6;
                 lastRoom = 204;
                 score = 2000;
+                spawnInterval = 5;
                 break;
         }
         total_time*=60;
-        int[] failure_ins = mainCamera.GetComponent<MainScript>().SetFailure(num_failures);
-        float[] patientArray = mainCamera.GetComponent<MainScript>().CreatePatients(num_patients,level);
+        Helper obj = transform.GetComponent<Helper>();
+        int[] failure_ins = obj.SetFailure(num_failures, total_time);
+        float[] patientArray = obj.CreatePatients(num_patients,level, lastRoom);
         
         float startTime = 0, lastUpdate = 1, alpha = 1, currentTime = 0, rating = 0;
         
@@ -70,7 +78,7 @@ public class LevelScript : MonoBehaviour
         for(int i=0;i<11;i++){
             inventory[i] = 0;
         }
-        SaveData data = new SaveData(patientArray,inventory, failure_ins,lastRoom,startTime, lastUpdate, alpha, currentTime, score, rating, total_time, level);
+        SaveData data = new SaveData(patientArray,inventory, failure_ins,lastRoom,startTime, lastUpdate, alpha, currentTime, score, rating, total_time, level, spawnInterval, waitingRoompenalty);
         string name = "level"+level.ToString();
         SaveSystem<SaveData>.SavePlayer(data, name);
         
@@ -85,15 +93,38 @@ public class LevelScript : MonoBehaviour
     {
         int xLevels = Mathf.RoundToInt(viewPortWidth / reservedWidth);
         int yLevels = Mathf.RoundToInt(viewPortHeight / reservedHeight);
-        mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
+        
+        SaveGlobal data = SaveSystem<SaveGlobal>.LoadPlayer("global1");
+        if(data==null){
+            data = new SaveGlobal(1,0f, 1, 0f);
+            SaveSystem<SaveGlobal>.SavePlayer(data, "global1");
+        }
+        else
+        {
+            Debug.Log(data.farthest_level);
+        }
         for(int i = 0; i< maxLevel; i++)
         {
             GameObject levelCard = Instantiate(levelPrefab, canvas.transform);
             int levelNumber = i + 1;
-            levelCard.GetComponent<RectTransform>().anchoredPosition = new Vector2(verticalHorizontalGap + reservedWidth * (i % xLevels), -(verticalHorizontalGap + reservedHeight * (i / xLevels)));
+            levelCard.GetComponent<RectTransform>().anchoredPosition = new Vector2(verticalHorizontalGap + reservedWidth * (i % xLevels), -(400 + verticalHorizontalGap + reservedHeight * (i / xLevels)));
+            if(data.farthest_level>=levelNumber){
+                levelCard.transform.Find("Lock").gameObject.SetActive(false);
+                levelCard.transform.Find("rating").GetComponent<Text>().text = "Rating: "+data.rating[levelNumber-1].ToString("0.00");
+                //activate level
+                //break;
+            }
+            else{
+                levelCard.transform.Find("Lock").gameObject.SetActive(false);
+                //levelCard.GetComponent<Button>().interactable = false;
+                //lock
+                //break;
+            }
+            // data.close();
             levelCard.GetComponent<Button>().onClick.AddListener(() => startLevel(levelNumber));
+           
             levelCard.transform.GetChild(0).gameObject.GetComponent<Text>().text = levelNumber.ToString();
         }
-        startLevel(3);
+        //startLevel(1);
     }
 }

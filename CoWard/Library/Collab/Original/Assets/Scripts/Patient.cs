@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using System.Linq;
 
 public class Patient : MonoBehaviour
 {
@@ -47,6 +48,7 @@ public class Patient : MonoBehaviour
 
     public float prob_sev_inc, prob_sev_dec_base;
     public float init_prob_inc, init_prob_dec;
+    public float prob_sev_dec_nonWard;
     public float room_multiplier = 0.01f;
     public int[] test_time = new int[3];
     public float[] acc = new float[3];
@@ -216,11 +218,9 @@ public class Patient : MonoBehaviour
     private void SetPositivity()
     {
         //Needs to converted to a random process
-        double p = 0.7;
-        
-        System.Random rnd = new System.Random();
-        double rv = rnd.NextDouble();
-        if(rv<p)
+        int[] weights = {3,6};
+        int rv = weighted_random(weights);
+        if(rv == 1)
         {
             make_positive();
         }
@@ -231,42 +231,39 @@ public class Patient : MonoBehaviour
 
     }
 
+
+    private int weighted_random(int[] weights){
+        int sum = weights.Sum();
+        float rv = Random.Range(0,sum);
+
+        int ans = 1;
+        int total = 0;
+        foreach (int weight in weights)
+        {   
+            total += weight;
+            if(rv<total)
+                return ans;
+            ans += 1;
+        }
+        return ans;
+    }
+
     private void SetSeverity()
     {
-        float sigma = 3;
-
-        // Sasta gaussian
-        float v1,v2,s;
-        do
-        {
-            v1 = 2.0f * Random.Range(0f,1f) - 1.0f;
-            v2 = 2.0f * Random.Range(0f,1f) - 1.0f;
-            s = v1*v1+v2*v2;
-        }
-        while( s>= 1.0f || s == 0f);
-
-        s = Mathf.Sqrt((-2.0f*Mathf.Log(s))/s);
-        float g1 = v1*s*sigma + 7.5f;
-
-        do
-        {
-            v1 = 2.0f * Random.Range(0f,1f) - 1.0f;
-            v2 = 2.0f * Random.Range(0f,1f) - 1.0f;
-            s = v1*v1+v2*v2;
-        }
-        while( s>= 1.0f || s == 0f);
-
-        s = Mathf.Sqrt((-2.0f*Mathf.Log(s))/s);
-        float g2 = v1*s*sigma + 2.5f;
-
-        //
+        float sigma = 1;
 
         if(infected==1)
-            severity = g1;
+        {
+            int[] weights = {0,0,1,4,6,8,8,5,2,2};
+            severity = weighted_random(weights);
+            Debug.Log("infected severity: "+severity);
+        }
         else
-            severity = g2;
-
-        severity = Mathf.Clamp(severity, 1, 10);
+        {
+            int[] weights = {4,4,4,3,3,3,2,1,0,0};
+            severity = weighted_random(weights);
+            Debug.Log("uninfected severity: "+severity);
+        }
     }
     
     int test_positivity()
@@ -409,61 +406,48 @@ public class Patient : MonoBehaviour
         SetSeverity();
         high_severity_time = 0;
         switch(level){
-            
-            case 1: 
-            prob_sev_inc = 0.07f;
-            prob_sev_dec_base = 0.1f;
-            max_coins = 100+Random.Range(0,11)*10;
-            break;
+
+            case 1:
+                prob_sev_inc = 0.07f;
+                prob_sev_dec_base = 0.1f;
+                prob_sev_dec_nonWard = 0.08f;
+                max_coins = 100 + Random.Range(0, 11) * 10;
+                break;
             case 2:
-            prob_sev_inc = 0.07f;
-            prob_sev_dec_base = 0.1f;
-            max_coins = 200+Random.Range(0,11)*10;
-            break;
+                prob_sev_inc = 0.07f;
+                prob_sev_dec_base = 0.1f;
+                prob_sev_dec_nonWard = 0.07f;
+                max_coins = 100 + Random.Range(0, 11) * 20;
+                break;
             case 3:
-            prob_sev_inc = 0.07f;
-            prob_sev_dec_base = 0.1f;
-            max_coins = 300+Random.Range(0,11)*10;
-            break;
+                prob_sev_inc = 0.07f;
+                prob_sev_dec_base = 0.1f;
+                prob_sev_dec_nonWard = 0.06f;
+                max_coins = 200 + Random.Range(0, 11) * 20;
+                break;
             case 4:
-            prob_sev_inc = 0.07f;
-            prob_sev_dec_base = 0.1f;
-            max_coins = 400+Random.Range(0,11)*10;
-            break;
+                prob_sev_inc = 0.07f;
+                prob_sev_dec_base = 0.1f;
+                prob_sev_dec_nonWard = 0.05f;
+                max_coins = 300 + Random.Range(0, 11) * 30;
+                break;
             case 5:
-            prob_sev_inc = 0.07f;
-            prob_sev_dec_base = 0.1f;
-            max_coins = 500+Random.Range(0,11)*10;
-            break;
+                prob_sev_inc = 0.07f;
+                prob_sev_dec_base = 0.1f;
+                prob_sev_dec_nonWard = 0.04f;
+                max_coins = 300 + Random.Range(0, 11) * 50;
+                break;
 
         }
         init_prob_dec = prob_sev_dec_base;
         init_prob_inc = prob_sev_inc;
         clock = 0;
-        /*
-        if(age == 5)
-        {
-            infected = Random.Range(0, 2);
-            severity = infected * Random.Range(5, 11) + (1 - infected) * Random.Range(1, 6);
-        }
-        if(age == 4 || age == 1)
-        {
-            infected = Random.Range(0, 2);
-            severity = infected * Random.Range(2, 9) + (1 - infected) * Random.Range(1, 6);
-        }
-        if(age == 3 || age == 2)
-        {
-            infected = Random.Range(0, 2);
-            severity = infected * Random.Range(1, 7) + (1 - infected) * Random.Range(1, 6);
-        }
-        */
 
         //depending on severity initialize symptoms
         InitializeSymptoms(severity);
         Initseverity = severity;
         infected_init = infected;
-        //Debug.Log(severity + "     " + (fever + cough + tiredness + chest_pain + breathing_difficulty).ToString());
-        // randomly initialize proximity_to_covid_patient. This is rarely severe.
+
         int temp_prox = infected * Random.Range(0, 21) + (1-infected) * Random.Range(0,20);
         if(temp_prox == 20)
         {
@@ -523,27 +507,6 @@ public class Patient : MonoBehaviour
 
     private void Update()
     {
-/*        if (startTesting)
-        {
-            startTestTime = Time.time;
-            startTesting = false;
-            priorPositive = infected;
-            switch (kitName)
-            {
-                case "CommonKit":
-                    totalTestTime = 10;
-                    accuracy = 0.7f;
-                    break;
-                case "ExpensiveKit":
-                    totalTestTime = 15;
-                    accuracy = 0.9f;
-                    break;
-                case "DeluxeKit":
-                    totalTestTime = 20;
-                    accuracy = 1f;
-                    break;
-            }
-        }*/
         if(startTestTime != 0 && Time.time - startTestTime > totalTestTime)
         {
             startTestTime = 0;
@@ -564,7 +527,12 @@ public class Patient : MonoBehaviour
             {
                 previouslyMoving = true;
                 patientCard.SetActive(true);
-                //patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("character/" + age.ToString() + "/" + gender.ToString() + "/1.png");
+                patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("character/" + age.ToString() + "/" + gender.ToString() + "/1");
+                Vector2 vec = new Vector2(100, 100);
+                GetComponent<RectTransform>().sizeDelta = vec;
+                GetComponent<BoxCollider2D>().size = vec;
+                GetComponent<BoxCollider2D>().offset = vec / 2;
+
             }
             //GetComponent<Image>().sprite = 
         }
@@ -574,11 +542,27 @@ public class Patient : MonoBehaviour
             {
                 previouslyMoving = false;
                 patientCard.SetActive(false);
-                /*if(transform.parent.gameObject.name == "Lobby")
+                if (transform.parent.gameObject.name == "Lobby")
                 {
-                    Debug.Log("YO");
-                    Debug.Log("characterSitting/" + age.ToString() + "/" + gender.ToString() + "/1.png");
-                    patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("characterSitting/" + age.ToString() + "/" + gender.ToString() + "/1.png");
+                    patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("characterSitting/" + age.ToString() + "/" + gender.ToString() + "/1");
+                    Vector2 vec = new Vector2(100, 265);
+                    GetComponent<RectTransform>().sizeDelta = vec;
+
+                    GetComponent<BoxCollider2D>().size = vec;
+                    GetComponent<BoxCollider2D>().offset = vec / 2;
+                }
+                else if(transform.parent.gameObject.name.Substring(0,4) == "Beds")
+                {
+                    patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("characterInBed/" + age.ToString() + "/" + gender.ToString() + "/1");
+                    Vector2 vec = new Vector2(175, 200);
+                    GetComponent<RectTransform>().sizeDelta = vec;
+                    GetComponent<BoxCollider2D>().size = vec;
+                    GetComponent<BoxCollider2D>().offset = vec / 2;
+                }
+                /*else
+                {
+                    patientCharacter.GetComponent<Image>().sprite = Resources.Load<Sprite>("character/" + age.ToString() + "/" + gender.ToString() + "/1");
+
                 }*/
             }
         }
@@ -612,10 +596,6 @@ public class Patient : MonoBehaviour
         }
     }
 
-/*    public void UpdateSeverity(){
-        time = Time.time;
-        severity = Initseverity - (int)(time - initTime);
-    }*/
 
     public void administer_medicine()
     {
@@ -642,7 +622,7 @@ public class Patient : MonoBehaviour
         if (is_dead)
         {
             score_done = true;
-            final_score = 0.5f * max_coins;
+            final_score = -0.3f * max_coins;
             return final_score;
         }
         float improvement_score, time_score, expected_time;
@@ -680,7 +660,7 @@ public class Patient : MonoBehaviour
         if(score<0)
             return 0;
         
-        return (int) score * max_stars / max_coins ;
+        return (score * max_stars) / max_coins ;
 
     }
 
@@ -697,13 +677,6 @@ public class Patient : MonoBehaviour
 
     public void Discharge()
     {
-        //Debug.Log("discharge");
-        //ADD CODE
-        //int alpha = 10;
-        // float time_factor = Mathf.Clamp01( 1 - Mathf.Exp(- timeFactorFlatness * (Time.time - initTime)));
-        // float heal_percentage = (Initseverity - severity) / Initseverity;
-        // int coins_to_add = (int)(max_coins / 2 * Mathf.Clamp(heal_percentage + time_factor, 0, 2));
-        
         if (!is_dead)
         {
             int coins_to_add = (int) score();
@@ -715,6 +688,7 @@ public class Patient : MonoBehaviour
             int coins_to_add = (int) score();
             StartCoroutine(mainCamera.GetComponent<Attributes>().UpdateScore(coins_to_add, 2));
         }
+        FindObjectOfType<AudioManager>().Play("exit");
     }
 
     public void UpdateSeverity()
@@ -727,12 +701,9 @@ public class Patient : MonoBehaviour
         if (rv < prob_sev_inc)
         {
             severity += 1;
-            if(severity > 15)
+            if(severity > 10)
             {
-                //death
-            }else if(severity > 12)
-            {
-                //warning
+                severity = 10;
             }else if(severity < 11)
             {
                 int i = Random.Range(0, 11- (int)severity);
@@ -769,75 +740,81 @@ public class Patient : MonoBehaviour
             increased = true;
             //Debug.Log("increased");
         }
-        
+        //if(transform.parent.parent.gameObject.tag.Substring(0, 5) == "level" && (transform.parent.parent.gameObject.tag[5] - '0') * room_multiplier + prob_sev_dec_base)
+        string roomTag = transform.parent.parent.gameObject.tag;
+        float prob_sev_dec = 0;
+        if (roomTag.Substring(0, 5) == "level")
+        {
+            prob_sev_dec = (roomTag[5] - '0') * room_multiplier + prob_sev_dec_base;
+            
+            
+        }
+        else
+        {
+            prob_sev_dec = prob_sev_dec_nonWard;
+        }
+        if (!increased && rv < prob_sev_inc + prob_sev_dec)
+        {
+            //Debug.Log("decreased");
+
+            severity -= 1;
+            if (severity < 0)
+            {
+                severity = 0;
+            }
+            else if (severity < 10)
+            {
+                int i = Random.Range(0, (int)severity + 1);
+                if ((i -= fever) < 0)
+                {
+                    fever -= 1;
+                    UpdateFeverSymptoms();
+                }
+                else if ((i -= cough) < 0)
+                {
+                    cough -= 1;
+                    UpdateCoughSymptoms();
+                }
+                else if ((i -= tiredness) < 0)
+                {
+                    tiredness -= 1;
+                    UpdateTirednessSymptoms();
+                }
+                else if ((i -= chest_pain) < 0)
+                {
+                    chest_pain -= 1;
+                    UpdateChestPainSymptoms();
+                }
+                else if ((i -= breathing_difficulty) < 0)
+                {
+                    breathing_difficulty -= 1;
+                    UpdateBreathingDifficultySymptoms();
+                }
+                else
+                {
+                    Debug.Log("error2");
+                }
+            }
+        }
+
+        //Debug.Log("prob " + prob_sev_inc.ToString() + " " + prob_sev_dec.ToString() + " " + prob_sev_dec_base.ToString());
+
         if (severity >= 8)
         {
             high_severity_time += 1;
         }
 
-        if(high_severity_time >= high_severity_time_max)
+        if (high_severity_time >= high_severity_time_max)
         {
-            if(!is_dead)
+            if (!is_dead)
                 FindObjectOfType<AudioManager>().Play("death");
             is_dead = true;
-            int coins_to_add = (int) score();
-            StartCoroutine(mainCamera.GetComponent<Attributes>().UpdateScore(coins_to_add, 0)); 
+            int coins_to_add = (int)score();
+            StartCoroutine(mainCamera.GetComponent<Attributes>().UpdateScore(coins_to_add, 0));
             mainCamera.GetComponent<Attributes>().UpdateRating(rating(coins_to_add));
-            
 
         }
-        string roomTag = transform.parent.parent.gameObject.tag;
-        if(roomTag.Substring(0, 5) == "level")
-        {
-            float prob_sev_dec = (roomTag[5] - '0')* room_multiplier + prob_sev_dec_base;
-            if(!increased && rv < prob_sev_inc + prob_sev_dec)
-            {
-                //Debug.Log("decreased");
-                
-                severity -= 1;
-                if(severity < 0)
-                {
-                    severity = 0;
-                }else if(severity < 10)
-                {
-                    int i = Random.Range(0, (int)severity + 1);
-                    if ((i -= fever) < 0)
-                    {
-                        fever -= 1;
-                        UpdateFeverSymptoms();
-                    }
-                    else if ((i -= cough) < 0)
-                    {
-                        cough -= 1;
-                        UpdateCoughSymptoms();
-                    }
-                    else if ((i -= tiredness) < 0)
-                    {
-                        tiredness -= 1;
-                        UpdateTirednessSymptoms();
-                    }
-                    else if ((i -= chest_pain) < 0)
-                    {
-                        chest_pain -= 1;
-                        UpdateChestPainSymptoms();
-                    }
-                    else if ((i -= breathing_difficulty) < 0)
-                    {
-                        breathing_difficulty -= 1;
-                        UpdateBreathingDifficultySymptoms();
-                    }
-                    else 
-                    { 
-                        Debug.Log("error2"); 
-                    }
-                }
-            }
-            else
-            {
-                //Debug.Log("same");
-            }
-        }
-        if((int)severity != fever + cough + tiredness + chest_pain + breathing_difficulty && (int)severity <= 10)
+        if ((int)severity != fever + cough + tiredness + chest_pain + breathing_difficulty && (int)severity <= 10)
         {
             Debug.Log("error3");
             Debug.Log(severity.ToString() + " " + (fever + cough + tiredness + chest_pain + breathing_difficulty).ToString());

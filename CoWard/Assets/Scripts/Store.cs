@@ -107,24 +107,25 @@ public class Store : MonoBehaviour
 		for(int i=0;i<shoplen;i++){
 			store[i] = 0;
 		}
-		if(level<2){
+		if(level>=1){
 			store[0] = 1;
+			store[8] = 1;
 		}
-		if(level<3){
+		if(level>=2){
 			store[1] = 1;
 			store[3] = 1;
 		}
-		if(level<4){
+		if(level>=3){
 			store[4] = 1;
 			store[5] = 1;
-			store[8] = 1;
+			
 			store[9] = 1;
 		}
-		if(level<5){
+		if(level>=4){
 			store[2] = 1;
 			store[6] = 1;
 		}
-		if(level<6){
+		if(level>=5){
 			store[7] = 1;
 		}
 
@@ -144,8 +145,8 @@ public class Store : MonoBehaviour
 		mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
 	}
 	private void Start(){
-		
-		// gameObject.SetActive(false);
+		//shopOn = false;
+		//gameObject.SetActive(false);
 	}
 	public void NextButton(){
 		
@@ -319,7 +320,8 @@ public class Store : MonoBehaviour
 							return 0;
 						}
 						appliedOnObject.tag = "level" + ((appliedOnObject.tag[5] - '0') + 1).ToString();
-						appliedOnObject.GetComponent<Image>().color = Color.red;
+						//appliedOnObject.GetComponent<Image>().color = Color.red;
+						appliedOnObject.GetComponent<Image>().sprite = Resources.Load<Sprite>("f2");
 						inventory[itemObj]-=1;
 						quantity[itemObj].text = (int.Parse(quantity[itemObj].text) - 1).ToString();
 						return 1;
@@ -343,7 +345,8 @@ public class Store : MonoBehaviour
 							return 0;
 						}
 						appliedOnObject.tag = "level" + ((appliedOnObject.tag[5] - '0') + 2).ToString();
-						appliedOnObject.GetComponent<Image>().color = Color.blue;
+						//appliedOnObject.GetComponent<Image>().color = Color.blue;
+						appliedOnObject.GetComponent<Image>().sprite = Resources.Load<Sprite>("f3");
 						inventory[itemObj]-=1;
 						quantity[itemObj].text = (int.Parse(quantity[itemObj].text) - 1).ToString();
 						return 1;
@@ -368,7 +371,8 @@ public class Store : MonoBehaviour
 							return 0;
 						}
 						appliedOnObject.tag = "level" + ((appliedOnObject.tag[5] - '0') + 3).ToString();
-						appliedOnObject.GetComponent<Image>().color = new Color(0,1,1,1);
+						//appliedOnObject.GetComponent<Image>().color = new Color(0,1,1,1);
+						appliedOnObject.GetComponent<Image>().sprite = Resources.Load<Sprite>("f4");
 						inventory[itemObj]-=1;
 						quantity[itemObj].text = (int.Parse(quantity[itemObj].text) - 1).ToString();
 						return 1;

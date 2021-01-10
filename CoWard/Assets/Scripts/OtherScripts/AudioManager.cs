@@ -31,7 +31,6 @@ public class AudioManager : MonoBehaviour
 
 			s.source.outputAudioMixerGroup = mixerGroup;
 		}
-		Play("background");
 		Debug.Log("play");
 	}
 

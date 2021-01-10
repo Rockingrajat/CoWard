@@ -11,7 +11,7 @@
     </activity>
     <meta-data android:name="unity.splash-mode" android:value="0" />
     <meta-data android:name="unity.splash-enable" android:value="True" />
-    <meta-data android:name="unity.build-id" android:value="754db98d-32f0-4dce-b998-4064658e2072" />
+    <meta-data android:name="unity.build-id" android:value="f4f61201-f164-45c0-aef3-1a8edc40df95" />
   </application>
   <uses-feature android:glEsVersion="0x00030000" />
   <uses-feature android:name="android.hardware.vulkan.version" android:required="false" />

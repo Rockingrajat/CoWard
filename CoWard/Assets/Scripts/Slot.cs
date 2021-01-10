@@ -19,7 +19,8 @@ public class Slot : MonoBehaviour
     {
         if (gameObject.name.Substring(0, 4) == "Beds")
         {
-            reservedPatientSize = 250;
+            reservedPatientSize = 200;
+            patientSize = 200;
 
         }
         height = GetComponent<RectTransform>().sizeDelta.y;
@@ -95,6 +96,8 @@ public class Slot : MonoBehaviour
                 GameObject currPatient = transform.GetChild(j).gameObject;
                 if(currPatient.name != "Testing")
                 {
+                    // s(currPatient);
+                    // Debug.Log(j);
                     int i = currPatient.GetComponent<Patient>().indexInSlot;
                     if(i > index)
                     {

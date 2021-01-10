@@ -8,11 +8,12 @@ public class Store : MonoBehaviour
 	[SerializeField] GameObject ShopItemTemplateObj;
 	private Transform container;
 	private Transform ShopItemTemplate;
-	public bool shopOn = false;
+	public static bool shopOn = false;
 	public static IDictionary<string, int> inventory = new Dictionary<string, int>();
 	[SerializeField] GameObject mainCamera;
 	float width = 430;
 	float height = 140;
+	int [] store;
 	IDictionary<string, Text> quantity = new Dictionary<string, Text>();
 	public GameObject[] storeitems;
 	[SerializeField]
@@ -91,7 +92,7 @@ public class Store : MonoBehaviour
 		inventory["Ventilator"] = 0;
 	}
 
-	public void initializeStore()
+	public void initializeStore(int level)
     {
 		initializeInventory();
 		storeitems = new GameObject[shoplen];
@@ -102,7 +103,31 @@ public class Store : MonoBehaviour
 		commonComponent.text = inventory["CommonKit"].ToString();
 		expensiveComponent.text = inventory["ExpensiveKit"].ToString();
 		deluxeComponent.text = inventory["DeluxeKit"].ToString();
-		
+		store = new int[shoplen];
+		for(int i=0;i<shoplen;i++){
+			store[i] = 0;
+		}
+		if(level<2){
+			store[0] = 1;
+		}
+		if(level>=2){
+			store[1] = 1;
+			store[3] = 1;
+		}
+		if(level>=3){
+			store[4] = 1;
+			store[5] = 1;
+			store[8] = 1;
+			store[9] = 1;
+		}
+		if(level>=4){
+			store[2] = 1;
+			store[6] = 1;
+		}
+		if(level>=5){
+			store[7] = 1;
+		}
+
 		container = transform.Find("container");
 		ShopItemTemplate = ShopItemTemplateObj.transform;
 		storeitems[0]= CreateItemButton(Item.ItemType.CommonKit, Item.GetSprite(Item.ItemType.CommonKit), "Common Kit", Item.GetCost(Item.ItemType.CommonKit), 0);
@@ -120,7 +145,7 @@ public class Store : MonoBehaviour
 	}
 	private void Start(){
 		
-		// gameObject.SetActive(false);
+		gameObject.SetActive(false);
 	}
 	public void NextButton(){
 		
@@ -154,12 +179,19 @@ public class Store : MonoBehaviour
 		RectTransform shopItemRectTransform = shopItemTransform.GetComponent<RectTransform>();
 		int ind = p_ind%6;
 		shopItemRectTransform.anchoredPosition = new Vector2(width * (ind % 2), height * (ind / 2)) ;
-		shopItemTransform.Find("nameText").GetComponent<Text>().text = name;
+		shopItemTransform.Find("background").Find("nameText").GetComponent<Text>().text = name;
 		shopItemTransform.Find("Buy").Find("costText").GetComponent<Text>().text = cost.ToString();
-		shopItemTransform.Find("Icon").GetComponent<Image>().sprite = sprite;
+		shopItemTransform.Find("background").Find("Icon").GetComponent<Image>().sprite = sprite;
 		quantity[stringFromItem(itemType)] = shopItemTransform.Find("Use").Find("quantity").GetComponent<Text>();
-		shopItemTransform.Find("Buy").GetComponent<Button>().onClick.AddListener(() => BoughtItem(itemType));
+		
 		GameObject HelpPanel = shopItemTransform.Find("HelpPanel").gameObject;
+		if(store[p_ind]==0){
+			shopItemTransform.Find("Lock").gameObject.SetActive(true);
+		}
+		else{
+			shopItemTransform.Find("Buy").GetComponent<Button>().onClick.AddListener(() => BoughtItem(itemType));
+			shopItemTransform.Find("Lock").gameObject.SetActive(false);
+		}
 		HelpPanel.SetActive(false);
 		shopItemTransform.Find("HelpButton").GetComponent<Button>().onClick.AddListener(() => ShowHelp(itemType, HelpPanel));		
 		Text helpText = HelpPanel.transform.Find("HelpText").GetComponent<Text>();
@@ -413,6 +445,7 @@ public class Store : MonoBehaviour
 					return 1;
 			}
 
+			FindObjectOfType<AudioManager>().Play("drop");
         }
         else
         {

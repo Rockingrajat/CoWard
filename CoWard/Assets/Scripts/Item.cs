@@ -57,16 +57,16 @@ public class Item : MonoBehaviour
 		switch(itemType)
 		{
 			default: return "Info";
-			case ItemType.AddRoom: return "addroom";
-			case ItemType.Medicine: return "medicine";
-			case ItemType.CommonKit: return "CommonKit";
-			case ItemType.ExpensiveKit: return "ExpensiveKit";
-			case ItemType.DeluxeKit: return "DeluxeKit";
-			case ItemType.Ventilator: return "Ventilator";
-			case ItemType.Cylinder: return "Cylinder";
-			case ItemType.RoomFailure: return "RoomFailure";
-			case ItemType.EquipmentFailure: return "EquipmentFailure";
-			case ItemType.Aesthetics: return "Aesthetics";
+			case ItemType.AddRoom: return "add room for more space in ward";
+			case ItemType.Medicine: return "drop on patient for speedy recovery, but don't overuse";
+			case ItemType.CommonKit: return "Low accuracy test kit";
+			case ItemType.ExpensiveKit: return "Moderate accuracy test kit";
+			case ItemType.DeluxeKit: return "High accuracy test kit";
+			case ItemType.Ventilator: return "Ventilator: better recovery of patients";
+			case ItemType.Cylinder: return "Oxygen Cylinder: better recovery of patients";
+			case ItemType.RoomFailure: return "Fix a broken room, else patients get very ill";
+			case ItemType.EquipmentFailure: return "Fix a room with failed equipment, else patients get ill";
+			case ItemType.Aesthetics: return "Aesthetics: better recovery of patients";
 		}
 	}
 }

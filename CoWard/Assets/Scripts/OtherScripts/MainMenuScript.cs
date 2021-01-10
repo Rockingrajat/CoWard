@@ -35,4 +35,8 @@ public class MainMenuScript : MonoBehaviour
         MainScript.resumeFile = "save1";
         //Debug.Log("Resume");
     }
+    public void Help()
+    {
+        SceneManager.LoadScene("Tutorial");
+    }
 }

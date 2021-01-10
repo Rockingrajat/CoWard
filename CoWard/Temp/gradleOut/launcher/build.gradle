@@ -18,7 +18,7 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 30
-        applicationId 'com.DefaultCompany.CoWard'
+        applicationId 'com.GameBegetter.CoWard'
         ndk {
             abiFilters 'armeabi-v7a'
         }
